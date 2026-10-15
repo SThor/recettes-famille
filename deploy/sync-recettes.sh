@@ -7,7 +7,7 @@
 set -euo pipefail
 
 DIR="${RECIPES_DIR:-/c/Users/Paul/obsidian/main/Projets/Livre de recettes pour Maman/Recettes}"
-[ -d "$DIR" ] || DIR="/mnt/c/Users/Paul/obsidian/main/Projets/Livre de recettes pour Maman/Recettes"
+[ -d "$DIR" ] || { echo "Dossier introuvable : $DIR (à lancer depuis Git Bash sur le PC)"; exit 1; }
 cd "$DIR"
 
 git add -A

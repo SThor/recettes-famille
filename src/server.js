@@ -56,12 +56,21 @@ app.get('/entrer', (req, res) => {
   res.redirect('/connexion');
 });
 
+// Revient sur la page d'où l'on vient (même site uniquement), sinon à l'accueil.
+function backTo(req) {
+  try {
+    const ref = new URL(req.get('referer'));
+    if (ref.host === req.get('host') && !ref.pathname.startsWith('/essais')) return ref.pathname + ref.search + ref.hash;
+  } catch {}
+  return '/';
+}
+
 // Styles d'essai : accessibles sans connexion pour pouvoir les comparer.
 app.get('/essais', (req, res) => res.send(views.essais({ theme: req.theme })));
 app.get('/essais/:theme', (req, res) => {
   if (!views.THEMES[req.params.theme]) return res.redirect('/essais');
   res.cookie('theme', req.params.theme, { ...cookieOpts(req), httpOnly: false });
-  res.redirect(req.get('referer')?.includes('/recette/') ? req.get('referer') : '/');
+  res.redirect(backTo(req));
 });
 
 // --- Suivi / modération (mot de passe admin, en Basic Auth) ---

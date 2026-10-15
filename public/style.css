@@ -184,6 +184,7 @@ form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-
 .thumb { margin: -8px 0 16px; }
 .editor-actions { display: flex; gap: 10px; position: sticky; bottom: 0; padding: 10px 0; background: var(--bg); }
 .editor-actions .button { flex: 1; }
-.button.secondary { background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); }
+/* Spécificité renforcée : les thèmes redéfinissent .button */
+.button.button.secondary { background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); }
 .link-button { border: 0; background: none; color: var(--muted); text-decoration: underline; font: inherit; cursor: pointer; padding: 8px 0; }
 .apercu { margin-top: 24px; border-top: 3px dashed var(--border); padding-top: 8px; }

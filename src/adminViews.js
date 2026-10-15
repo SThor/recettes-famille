@@ -1,4 +1,4 @@
-const { esc, enc, layout } = require('./views');
+const { esc, enc, layout, ASSET_V } = require('./views');
 
 const yes = ok => `<span class="badge ${ok ? 'ok' : 'ko'}">${ok ? '✓' : '✗'}</span>`;
 const wikiText = s => esc(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a);
@@ -125,7 +125,7 @@ function editor({ theme, title, action, source, base, fichier, isNew, proposal, 
   ${current ? `<details class="current"><summary>Version actuelle du fichier</summary><pre class="code">${esc(current)}</pre></details>` : ''}
   <div id="apercu" class="apercu" hidden></div>
 </section>
-<script src="/static/admin.js" defer></script>`;
+<script src="/static/admin.js?v=${ASSET_V}" defer></script>`;
   return layout({ title, theme, body, bodyClass: 'page-admin' });
 }
 

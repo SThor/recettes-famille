@@ -1,3 +1,6 @@
+// Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
+const ASSET_V = Date.now().toString(36);
+
 const THEMES = {
   simple: 'Simple',
   pastel: 'Pastel douillet',
@@ -20,8 +23,8 @@ function layout({ title, theme, body, bodyClass = '' }) {
 <meta name="robots" content="noindex">
 <title>${esc(title)} · Recettes de famille</title>
 ${fonts ? `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fonts}&display=swap">` : ''}
-<link rel="stylesheet" href="/static/style.css">
-${theme !== 'simple' ? `<link rel="stylesheet" href="/static/themes/${theme}.css">` : ''}
+<link rel="stylesheet" href="/static/style.css?v=${ASSET_V}">
+${theme !== 'simple' ? `<link rel="stylesheet" href="/static/themes/${theme}.css?v=${ASSET_V}">` : ''}
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍲</text></svg>">
 </head>
 <body class="theme-${theme} ${bodyClass}">
@@ -37,7 +40,7 @@ ${body}
     ${Object.entries(THEMES).map(([k, label]) => k === theme ? `<strong>${label}</strong>` : `<a href="/essais/${k}">${label}</a>`).join(' · ')}
   </p>
 </footer>
-<script src="/static/app.js" defer></script>
+<script src="/static/app.js?v=${ASSET_V}" defer></script>
 </body>
 </html>`;
 }
@@ -209,4 +212,4 @@ function notFound({ theme }) {
   return layout({ title: 'Introuvable', theme, body: `<section class="form-page center"><h1>Recette introuvable</h1><p><a href="/">Retour aux recettes</a></p></section>` });
 }
 
-module.exports = { THEMES, esc, enc, layout, recipeArticle, home, recipe, proposeForm, thanks, login, essais, notFound };
+module.exports = { THEMES, ASSET_V, esc, enc, layout, recipeArticle, home, recipe, proposeForm, thanks, login, essais, notFound };
