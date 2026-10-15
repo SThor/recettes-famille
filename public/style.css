@@ -472,3 +472,23 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .filters-panel .people .tags { margin: 8px 0 0; }
 .filters-panel .people .person { font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap; }
 .filters-panel .people .person .count { color: var(--muted); font-size: .85em; }
+
+/* Relecture par la famille (page recette) : questions, case « Conforme », signalement */
+.revue { margin-top: 32px; padding-top: 16px; border-top: 1px dashed var(--border); }
+.revue h2 { margin-bottom: 8px; }
+.revue h3 { font-size: 1rem; margin: 16px 0 8px; }
+.revue .threads { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; }
+.revue .thread { padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; }
+.revue .question { margin: 0; font-weight: 600; }
+.revue .answers { list-style: none; padding: 0; margin: 6px 0 0; font-size: .95rem; }
+.revue .answers li::before { content: "↳ "; color: var(--muted); }
+.revue details summary { cursor: pointer; color: var(--accent); font-weight: 600; margin-top: 6px; }
+.revue details form { margin-top: 10px; }
+.revue .conforme { margin: 16px 0; }
+.revue .conforme label.check { display: flex; gap: 10px; align-items: flex-start; margin: 0; }
+.revue .conforme input[type=checkbox] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.revue .conforme input:disabled + span { color: var(--muted); }
+.revue .conforme p { margin: 4px 0 10px 30px; }
+.revue .report summary { color: var(--muted); }
+.site-footer .account { margin: 0 0 6px; }
+.site-footer .account .link-button { padding: 0; font-size: inherit; }

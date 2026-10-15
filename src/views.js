@@ -19,7 +19,7 @@ const themeAssets = theme => (theme === 'simple' ? { css: '', fonts: '' } : {
   fonts: `/static/fonts/${theme}.css?v=${ASSET_V}`,
 });
 
-function layout({ title, theme, body, bodyClass = '' }) {
+function layout({ title, theme, body, bodyClass = '', account = null }) {
   const assets = themeAssets(theme);
   return `<!doctype html>
 <html lang="fr">
@@ -42,6 +42,7 @@ ${assets.css ? `<link rel="stylesheet" id="theme-css" href="${assets.css}">` : '
 ${body}
 </main>
 <footer class="site-footer">
+  ${account ? `<form method="post" action="/deconnexion" class="account">${account.prenom ? `Connecté·e : <b>${esc(account.prenom)}</b> · ` : ''}<button type="submit" class="link-button">Se déconnecter</button></form>` : ''}
   <p>Style d'essai :
     ${Object.entries(THEMES).map(([k, label]) => {
       const a = themeAssets(k);
@@ -108,7 +109,7 @@ function homeUrl(params, changes = {}) {
   return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
 }
 
-function home({ groups, fits = () => true, theme, tag = '', regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
+function home({ account, groups, fits = () => true, theme, tag = '', regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
 
@@ -190,7 +191,7 @@ ${resultsHead}
   <p class="empty" id="no-result" hidden>Aucune recette ne correspond… <a href="/proposer">En proposer une ?</a></p>
 </div>
 </div>`;
-  return layout({ title: 'Accueil', theme, body, bodyClass: 'page-home' });
+  return layout({ title: 'Accueil', theme, account, body, bodyClass: 'page-home' });
 }
 
 // Quantité affichée ; data-v permet de la recalculer selon les portions (sauf quantité fixe « = »).
@@ -317,11 +318,71 @@ function recipeArticle(r, { back = true } = {}) {
 </article>`;
 }
 
-function recipe({ r, theme }) {
-  return layout({ title: r.title, theme, body: recipeArticle(r), bodyClass: 'page-recipe' });
+// Messages après une action de relecture (?merci=…).
+const MERCI = {
+  reponse: 'Merci, ta réponse est enregistrée.',
+  erreur: 'Merci, l’erreur est signalée : elle sera corrigée.',
+  conforme: 'C’est noté : la recette est marquée conforme à l’original.',
+  'non-conforme': 'C’est noté : la recette n’est plus marquée conforme.',
+};
+
+// Relecture ouverte à la famille : questions (commentaires --) avec réponse, case « Conforme »,
+// signalement d'erreur. Le prénom est demandé dans le formulaire s'il n'est pas encore connu.
+function reviewHtml(r, { account, merci, error }) {
+  const action = what => `/recette/${r.slug}/${what}`;
+  const nameField = account?.prenom ? '' : '<label>Ton prénom<input name="prenom" required maxlength="40" autocomplete="given-name"></label>';
+  const verified = r.meta.verifie ? String(r.meta.verifie) : '';
+  const blocked = !verified && r.threads.length > 0;
+  const authors = peopleOf(r);
+
+  const threads = r.threads.length ? `<h3>Questions en suspens</h3>
+    <ul class="threads">${r.threads.map((th, i) => `<li class="thread">
+      <p class="question">${esc(th.question)}</p>
+      ${th.answers.length ? `<ul class="answers">${th.answers.map(a => `<li>${a.who ? `<b>${esc(a.who)}</b> : ` : ''}${esc(a.text)}</li>`).join('')}</ul>` : ''}
+      <details class="reply"><summary>${th.answers.length ? 'Ajouter une réponse' : 'Répondre'}</summary>
+        <form method="post" action="${action('repondre')}">
+          <input type="hidden" name="index" value="${i}"><input type="hidden" name="question" value="${esc(th.question)}">
+          ${nameField}
+          <label>Ta réponse<textarea name="reponse" rows="3" required maxlength="2000"></textarea></label>
+          <button type="submit" class="button">Envoyer la réponse</button>
+        </form>
+      </details>
+    </li>`).join('')}</ul>` : '';
+
+  // Sans prénom connu : pas d'envoi automatique, il faut d'abord le saisir.
+  const auto = account?.prenom && !blocked ? ' onchange="this.form.submit()"' : '';
+  const conforme = `<form method="post" action="${action('conforme')}" class="conforme">
+    <label class="check"><input type="checkbox" name="conforme" value="1"${verified ? ' checked' : ''}${blocked ? ' disabled' : ''}${auto}>
+      <span>Conforme à l’original${verified ? ` <span class="muted small">(${esc(verified)})</span>` : ''}</span></label>
+    <p class="muted small">${blocked
+      ? 'Il reste des questions : on pourra cocher quand elles seront réglées.'
+      : `Relue face à la fiche d’origine (ou à ton souvenir) : quantités, étapes, rien ne manque.${authors.length ? ` Idéalement cochée par ${esc(authors.join(' ou '))}.` : ''}`}</p>
+    ${blocked ? '' : `${nameField}${auto ? '<noscript><button type="submit" class="button">Enregistrer</button></noscript>' : '<button type="submit" class="button">Enregistrer</button>'}`}
+  </form>`;
+
+  const report = `<details class="report"><summary>Il y a une erreur ?</summary>
+    <form method="post" action="${action('erreur')}">
+      ${nameField}
+      <label>Qu’est-ce qui ne va pas ?<textarea name="texte" rows="3" required maxlength="2000"></textarea></label>
+      <button type="submit" class="button">Signaler l’erreur</button>
+    </form>
+  </details>`;
+
+  return `<section class="revue" id="revue">
+  <h2>Relecture</h2>
+  ${MERCI[merci] ? `<p class="flash">${MERCI[merci]}</p>` : ''}
+  ${error ? `<p class="error">${esc(error)}</p>` : ''}
+  ${threads}
+  ${conforme}
+  ${report}
+</section>`;
 }
 
-function proposeForm({ theme, error, values = {} }) {
+function recipe({ r, theme, account = null, merci = '', error = '' }) {
+  return layout({ title: r.title, theme, account, body: recipeArticle(r) + reviewHtml(r, { account, merci, error }), bodyClass: 'page-recipe' });
+}
+
+function proposeForm({ theme, account, error, values = {} }) {
   const body = `
 <section class="form-page">
   <h1>Proposer une recette</h1>
@@ -339,24 +400,25 @@ function proposeForm({ theme, error, values = {} }) {
     <button type="submit" class="button">Envoyer la recette</button>
   </form>
 </section>`;
-  return layout({ title: 'Proposer une recette', theme, body });
+  return layout({ title: 'Proposer une recette', theme, account, body });
 }
 
-function thanks({ theme, prenom }) {
+function thanks({ theme, account, prenom }) {
   const body = `<section class="form-page center">
   <h1>Merci ${esc(prenom)} !</h1>
   <p>Ta recette est bien arrivée. Elle apparaîtra dans le livre une fois mise au propre.</p>
   <p><a class="button" href="/">Retour aux recettes</a> <a href="/proposer">En proposer une autre</a></p>
 </section>`;
-  return layout({ title: 'Merci', theme, body });
+  return layout({ title: 'Merci', theme, account, body });
 }
 
-function login({ theme, error }) {
+function login({ theme, error, prenom = '' }) {
   const body = `<section class="form-page center">
   <h1>Recettes de la Givellerie</h1>
   <p>Ce petit livre est réservé à la famille Givel.</p>
   ${error ? `<p class="error">${esc(error)}</p>` : ''}
   <form method="post" action="/connexion" class="login">
+    <label>Ton prénom <small>(il signe tes réponses et vérifications)</small><input name="prenom" required maxlength="40" value="${esc(prenom)}" autocomplete="given-name"></label>
     <label>Mot de passe de la famille<input type="password" name="motdepasse" required autocomplete="current-password"></label>
     <button type="submit" class="button">Entrer</button>
   </form>
@@ -364,7 +426,7 @@ function login({ theme, error }) {
   return layout({ title: 'Connexion', theme, body });
 }
 
-function essais({ theme }) {
+function essais({ theme, account }) {
   const body = `<section class="form-page">
   <h1>Styles d'essai</h1>
   <p>Choisis un style : il s'applique à tout le site, sur cet appareil.</p>
@@ -374,12 +436,12 @@ function essais({ theme }) {
     <li><a href="/essais/vichy"><b>Nappe vichy</b><span>Rustique, carreaux rouges et papier kraft.</span></a></li>
   </ul>
 </section>`;
-  return layout({ title: 'Styles', theme, body });
+  return layout({ title: 'Styles', theme, account, body });
 }
 
 
-function notFound({ theme }) {
-  return layout({ title: 'Introuvable', theme, body: `<section class="form-page center"><h1>Recette introuvable</h1><p><a href="/">Retour aux recettes</a></p></section>` });
+function notFound({ theme, account }) {
+  return layout({ title: 'Introuvable', theme, account, body: `<section class="form-page center"><h1>Recette introuvable</h1><p><a href="/">Retour aux recettes</a></p></section>` });
 }
 
 module.exports = { THEMES, ASSET_V, esc, enc, layout, recipeArticle, home, recipe, proposeForm, thanks, login, essais, notFound };

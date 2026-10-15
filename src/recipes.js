@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parse } = require('./cooklang');
 const { toMinutes } = require('./durations');
+const { questionsOf, threadsOf } = require('./revue');
 
 const PHOTO_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const COURSES = [
@@ -21,19 +22,6 @@ function slugify(s) {
 function asList(v) {
   if (!v) return [];
   return Array.isArray(v) ? v.filter(Boolean) : [v];
-}
-
-// Questions ouvertes : commentaires Cooklang du corps (`-- …` et `[- … -]`), invisibles dans le livre.
-function openQuestions(src) {
-  const body = src.replace(/^﻿/, '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
-  const questions = [];
-  const rest = body.replace(/\[-([\s\S]*?)-\]/g, (_, q) => { questions.push(q.trim()); return ''; });
-  for (const line of rest.split(/\r?\n/)) {
-    const m = line.match(/(?:^|\s)--(?!-)\s*(.*)$/);
-    if (m && m[1].trim()) questions.push(m[1].trim());
-  }
-  // Ordre d'apparition : les blocs ont été relevés en premier, on retrie selon leur position.
-  return questions.sort((a, b) => body.indexOf(a) - body.indexOf(b));
 }
 
 // Durées en minutes pour le filtre : préparation, et total = `time` s'il est donné,
@@ -63,7 +51,9 @@ function fromSource(src, file, dir) {
     photo: photo || null,
     originals: asList(r.meta.original),
     tags: asList(r.meta.tags),
-    questions: openQuestions(src),
+    // Questions ouvertes : commentaires Cooklang du corps (voir revue.js), avec leurs réponses.
+    questions: questionsOf(src),
+    threads: threadsOf(src),
     stepPhotos,
     durations: durationsOf(r.meta),
     ...r,

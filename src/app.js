@@ -8,6 +8,9 @@ const views = require('./views');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
 const { fontsRouter } = require('./fonts');
+const { answerQuestion, reportError, cleanName } = require('./revue');
+const { setField } = require('./frontmatter');
+const { writeAtomic, today } = require('./files');
 
 
 // Construit l'application (sans l'écouter) : utilisé par server.js et par les tests.
@@ -37,6 +40,9 @@ function createApp({
     const c = cookies(req);
     req.theme = views.THEMES[c.theme] ? c.theme : 'simple';
     req.isFamily = !FAMILY_PASSWORD || safeEqual(c.famille || '', familyToken());
+    // Prénom donné à la connexion (ou dans un formulaire) : signe les réponses, vérifications, signalements.
+    req.prenom = cleanName(c.prenom);
+    req.account = req.isFamily ? { prenom: req.prenom } : null;
     next();
   });
 
@@ -48,10 +54,23 @@ function createApp({
     res.cookie('famille', familyToken(), cookieOpts(req));
     res.redirect('/');
   }
+  const rememberName = (req, res, prenom) => res.cookie('prenom', prenom, cookieOpts(req));
   app.get('/connexion', (req, res) => res.send(views.login({ theme: req.theme })));
   app.post('/connexion', express.urlencoded({ extended: false }), (req, res) => {
-    if (FAMILY_PASSWORD && safeEqual(String(req.body.motdepasse || '').trim(), FAMILY_PASSWORD)) return enter(req, res);
-    res.status(401).send(views.login({ theme: req.theme, error: 'Ce n\'est pas le bon mot de passe.' }));
+    const prenom = cleanName(req.body.prenom);
+    if (!(FAMILY_PASSWORD && safeEqual(String(req.body.motdepasse || '').trim(), FAMILY_PASSWORD))) {
+      return res.status(401).send(views.login({ theme: req.theme, prenom, error: 'Ce n\'est pas le bon mot de passe.' }));
+    }
+    if (!prenom) return res.status(400).send(views.login({ theme: req.theme, error: 'Indique ton prénom : il signe tes réponses et tes vérifications.' }));
+    rememberName(req, res, prenom);
+    enter(req, res);
+  });
+  // Déconnexion (appareil partagé, couple…) : on oublie l'accès et le prénom.
+  app.post('/deconnexion', (req, res) => {
+    const { maxAge, ...opts } = cookieOpts(req);
+    res.clearCookie('famille', opts);
+    res.clearCookie('prenom', opts);
+    res.redirect('/connexion');
   });
   app.get('/entrer', (req, res) => {
     if (FAMILY_PASSWORD && safeEqual(String(req.query.cle || ''), FAMILY_PASSWORD)) return enter(req, res);
@@ -68,7 +87,7 @@ function createApp({
   }
 
   // Styles d'essai : accessibles sans connexion pour pouvoir les comparer.
-  app.get('/essais', (req, res) => res.send(views.essais({ theme: req.theme })));
+  app.get('/essais', (req, res) => res.send(views.essais({ theme: req.theme, account: req.account })));
   app.get('/essais/:theme', (req, res) => {
     if (!views.THEMES[req.params.theme]) return res.redirect('/essais');
     res.cookie('theme', req.params.theme, { ...cookieOpts(req), httpOnly: false });
@@ -102,13 +121,13 @@ function createApp({
     const unknown = duree ? store.all().filter(r => base(r) && minutes(r) == null).length : 0;
     // Paramètres de filtre actuels, dans l'ordre de l'URL (pour construire les liens).
     const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'personne', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
-    res.send(views.home({ groups, fits, theme: req.theme, tag, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
+    res.send(views.home({ account: req.account, groups, fits, theme: req.theme, tag, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
   });
 
   app.get('/recette/:slug', (req, res) => {
     const r = store.get(req.params.slug);
     if (!r) return res.status(404).send(views.notFound({ theme: req.theme }));
-    res.send(views.recipe({ r, theme: req.theme }));
+    res.send(views.recipe({ r, theme: req.theme, account: req.account, merci: req.query.merci }));
   });
 
   app.get('/photos/*', (req, res) => {
@@ -134,7 +153,7 @@ function createApp({
     fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
   });
 
-  app.get('/proposer', (req, res) => res.send(views.proposeForm({ theme: req.theme })));
+  app.get('/proposer', (req, res) => res.send(views.proposeForm({ theme: req.theme, account: req.account, values: { prenom: req.prenom } })));
   app.post('/proposer',
     (req, res, next) => {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -146,7 +165,7 @@ function createApp({
       const values = req.body || {};
       const fail = msg => {
         fs.rmSync(req.submissionDir, { recursive: true, force: true });
-        res.status(400).send(views.proposeForm({ theme: req.theme, error: msg, values }));
+        res.status(400).send(views.proposeForm({ theme: req.theme, account: req.account, error: msg, values }));
       };
       if (err) return fail(err.code === 'LIMIT_FILE_SIZE' ? 'Une des photos est trop lourde (25 Mo max).' : 'L\'envoi n\'a pas marché, réessaie.');
       const prenom = String(values.prenom || '').trim();
@@ -162,14 +181,80 @@ function createApp({
       fs.writeFileSync(path.join(req.submissionDir, `${slugify(titre) || 'recette'}.md`),
         `# ${titre}\n\nProposée par ${prenom}, le ${info.date}\n\n${texte}\n${info.anecdote ? `\n> ${info.anecdote.replace(/\n/g, '\n> ')}\n` : ''}${photos.length ? `\nPhotos : ${photos.join(', ')}\n` : ''}`);
       console.log(`Nouvelle recette proposée : « ${titre} » par ${prenom} (${req.submissionId})`);
-      res.send(views.thanks({ theme: req.theme, prenom }));
+      res.send(views.thanks({ theme: req.theme, account: req.account, prenom }));
     }));
 
-  app.use((req, res) => res.status(404).send(views.notFound({ theme: req.theme })));
+  // --- Relecture par la famille (sans accès admin) : chaque action modifie le .cook et est commitée ---
+  const reviewForm = express.urlencoded({ extended: false, limit: '100kb' });
+  // Recette concernée + prénom (connu, ou saisi dans le formulaire puis retenu).
+  function reviewer(req, res) {
+    store.invalidate();
+    const r = store.get(req.params.slug);
+    if (!r) { res.status(404).send(views.notFound({ theme: req.theme, account: req.account })); return null; }
+    const typed = cleanName(req.body.prenom);
+    if (typed) rememberName(req, res, typed);
+    const who = typed || req.prenom;
+    const refuse = (status, error) => res.status(status).send(views.recipe({ r, theme: req.theme, account: { prenom: who }, error }));
+    if (!who) { refuse(400, 'Indique ton prénom.'); return null; }
+    return { r, who, refuse, full: path.join(RECIPES_DIR, r.file) };
+  }
+  const done = (res, r, merci) => { store.invalidate(); res.redirect(`/recette/${r.slug}?merci=${merci}#revue`); };
+  class Gone extends Error {}
+
+  app.post('/recette/:slug/repondre', reviewForm, async (req, res, next) => {
+    const ctx = reviewer(req, res);
+    if (!ctx) return;
+    const { r, who, refuse, full } = ctx;
+    const reponse = String(req.body.reponse || '').trim();
+    if (!reponse) return refuse(400, 'Ta réponse est vide.');
+    try {
+      await git.write(`Site : réponse de ${who} sur « ${r.title} »`, who, () => {
+        const out = answerQuestion(fs.readFileSync(full, 'utf8'), { index: req.body.index, question: String(req.body.question || '') }, who, reponse);
+        if (out == null) throw new Gone();
+        writeAtomic(full, out);
+      });
+      done(res, r, 'reponse');
+    } catch (err) {
+      if (err instanceof Gone) return refuse(409, 'Cette question a changé ou a déjà été réglée entre-temps : ta réponse n\'a pas été enregistrée.');
+      next(err);
+    }
+  });
+
+  app.post('/recette/:slug/conforme', reviewForm, async (req, res, next) => {
+    const ctx = reviewer(req, res);
+    if (!ctx) return;
+    const { r, who, refuse, full } = ctx;
+    const on = Boolean(req.body.conforme);
+    if (on && r.questions.length) return refuse(409, 'Il reste des questions sur cette recette : on pourra la dire conforme quand elles seront réglées.');
+    try {
+      await git.write(`Site : « ${r.title} » ${on ? `vérifiée par ${who}` : `n'est plus vérifiée (${who})`}`, who, () => {
+        writeAtomic(full, setField(fs.readFileSync(full, 'utf8'), 'verifie', on ? `${who} ${today()}` : ''));
+      });
+      done(res, r, on ? 'conforme' : 'non-conforme');
+    } catch (err) { next(err); }
+  });
+
+  app.post('/recette/:slug/erreur', reviewForm, async (req, res, next) => {
+    const ctx = reviewer(req, res);
+    if (!ctx) return;
+    const { r, who, refuse, full } = ctx;
+    const texte = String(req.body.texte || '').trim();
+    if (!texte) return refuse(400, 'Décris l\'erreur en quelques mots.');
+    try {
+      // Une erreur signalée retire la vérification : la recette n'est plus conforme.
+      await git.write(`Site : erreur signalée sur « ${r.title} » par ${who}`, who, () => {
+        const out = reportError(fs.readFileSync(full, 'utf8'), who, texte);
+        writeAtomic(full, r.meta.verifie ? setField(out, 'verifie', '') : out);
+      });
+      done(res, r, 'erreur');
+    } catch (err) { next(err); }
+  });
+
+  app.use((req, res) => res.status(404).send(views.notFound({ theme: req.theme, account: req.account })));
 
   app.use((err, req, res, next) => {
     console.error(err);
-    res.status(500).send(views.layout({ title: 'Erreur', theme: req.theme, body: `<section class="form-page"><h1>Oups</h1><p class="error">${views.esc(err.message)}</p><p>Rien n'a été perdu : reviens en arrière pour réessayer.</p></section>` }));
+    res.status(500).send(views.layout({ title: 'Erreur', theme: req.theme, account: req.account, body: `<section class="form-page"><h1>Oups</h1><p class="error">${views.esc(err.message)}</p><p>Rien n'a été perdu : reviens en arrière pour réessayer.</p></section>` }));
   });
 
   return { app, store, git };

@@ -21,9 +21,9 @@ test.describe('Accès famille', () => {
 
   test('mauvais mot de passe refusé, bon mot de passe donne un cookie qui ouvre le site', async () => {
     assert.equal((await t.req('/connexion', { method: 'POST', body: t.form({ motdepasse: 'non' }) })).status, 401);
-    const ok = await t.req('/connexion', { method: 'POST', body: t.form({ motdepasse: FAMILY }) });
+    const ok = await t.req('/connexion', { method: 'POST', body: t.form({ prenom: 'Paul', motdepasse: FAMILY }) });
     assert.equal(ok.status, 302);
-    const cookie = ok.headers.get('set-cookie').split(';')[0];
+    const cookie = ok.headers.getSetCookie().map(c => c.split(';')[0]).join('; '); // famille + prénom
     const home = await t.req('/', { headers: { cookie } });
     assert.equal(home.status, 200);
     assert.match(await home.text(), /Pounty de ma mamie/);
@@ -46,12 +46,12 @@ test.describe('Site public (connecté)', () => {
     cookie = (await t.req(`/entrer?cle=${FAMILY}`)).headers.get('set-cookie').split(';')[0];
   });
 
-  test('page recette : ingrédients, portions, notes, pas de commentaires', async () => {
+  test('page recette : ingrédients, portions, notes, pas de commentaires dans les étapes', async () => {
     const html = await (await t.req('/recette/pounty', { headers: { cookie } })).text();
     assert.match(html, /data-servings="6"/);
     assert.match(html, /lardons/);
     assert.match(html, /Une belle recette/);
-    assert.doesNotMatch(html, /point à vérifier/);
+    assert.doesNotMatch(html.split('id="revue"')[0], /point à vérifier/); // les questions sont dans la relecture
   });
 
   test('photos : sert les images, refuse de sortir du dossier', async () => {

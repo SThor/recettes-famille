@@ -8,18 +8,11 @@ const { parseTodo, serializeTodo, findItem } = require('./todo');
 const { setField, yamlList } = require('./frontmatter');
 const views = require('./views');
 const adminViews = require('./adminViews');
+const { writeAtomic, today } = require('./files');
 
 const TODO_FILE = 'À demander.md';
-const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
 const hash = s => crypto.createHash('sha1').update(s).digest('hex');
 const safeFileName = s => s.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
-
-// Écriture atomique : fichier temporaire puis renommage, pour ne jamais laisser un fichier à moitié écrit.
-function writeAtomic(full, data) {
-  const tmp = `${full}.tmp-${process.pid}`;
-  fs.writeFileSync(tmp, data);
-  fs.renameSync(tmp, full);
-}
 
 module.exports = function adminRouter({ store, git, dataDir, adminPassword, safeEqual }) {
   const router = express.Router();
