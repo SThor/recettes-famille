@@ -68,14 +68,17 @@ function card(r) {
 // JSON sûr dans un <script> (pas de « </script> » ni de « <!-- » possibles).
 const jsonForScript = data => JSON.stringify(data).replace(/</g, '\\u003c');
 
-function home({ groups, theme, tag = '', tags = [] }) {
+function home({ groups, theme, tag = '', regime = '', tags = [], diets = [] }) {
+  const dietRow = diets.length ? `<p class="diets">Régimes : ${diets.map(d => `<a class="diet" href="/?regime=${encodeURIComponent(d.name)}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud">
     <summary>Étiquettes <span class="count">${tags.length}</span></summary>
     <div class="tags">${tags.map(x => `<a class="tag" href="/?tag=${encodeURIComponent(x.name)}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
   const count = groups.reduce((n, g) => n + g.recipes.length, 0);
-  const tagBanner = tag ? `<p class="tag-filter">Étiquette : <b>${esc(tag)}</b> · ${count} recette${count > 1 ? 's' : ''} <a href="/" aria-label="Voir toutes les recettes">✕</a></p>
-  ${count ? '' : '<p class="empty">Aucune recette avec cette étiquette.</p>'}` : '';
+  // Bandeau des filtres actifs (régime, étiquette) ; la croix les retire tous.
+  const active = [regime && `Régime : <b>${esc(regime)}</b>`, tag && `Étiquette : <b>${esc(tag)}</b>`].filter(Boolean);
+  const tagBanner = active.length ? `<p class="tag-filter">${active.join(' · ')} · ${count} recette${count > 1 ? 's' : ''} <a href="/" aria-label="Voir toutes les recettes">✕</a></p>
+  ${count ? '' : `<p class="empty">${tag && !regime ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>`}` : '';
   const body = `
 <section class="intro">
   <h1>Le livre de recettes de la famille Givel</h1>
@@ -88,6 +91,7 @@ function home({ groups, theme, tag = '', tags = [] }) {
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
   </nav>
+  ${dietRow}
   ${tagBanner}
   ${tagCloud}
 </section>
@@ -165,7 +169,10 @@ function recipeArticle(r, { back = true } = {}) {
     m.diet && ['Régime', m.diet],
     m.source && ['Source', m.source],
     m.author && ['Transmise par', m.author],
-  ].filter(Boolean).map(([k, v]) => [k, asText(v)]);
+  ].filter(Boolean).map(([k, v]) => [k, k === 'Régime'
+    // Chaque régime mène à l'accueil filtré sur ce régime.
+    ? (Array.isArray(v) ? v : [v]).map(d => `<a href="/?regime=${encodeURIComponent(d)}">${esc(d)}</a>`).join(', ')
+    : esc(asText(v))]);
 
   // Numérotation des étapes : repart à 1 à chaque section ; photos d'étape indexées sur toute la recette.
   let stepNo = 0;
@@ -185,7 +192,7 @@ function recipeArticle(r, { back = true } = {}) {
   <h1>${esc(r.title)}</h1>
   ${m.description ? `<p class="description">${esc(m.description)}</p>` : ''}
   ${r.tags.length ? `<p class="tags">${r.tags.map(t => `<a class="tag" href="/?tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join('')}</p>` : ''}
-  ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+  ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
   ${relatedHtml(r.related)}
 
   <section class="ingredients">

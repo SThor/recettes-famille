@@ -140,6 +140,6 @@ test.describe('Affichage', () => {
     const out = html();
     assert.match(out, /<dt>Difficulté<\/dt><dd>facile<\/dd>/);
     assert.match(out, /<dt>Cuisine<\/dt><dd>française<\/dd>/);
-    assert.match(out, /<dt>Régime<\/dt><dd>végétarien, sans porc<\/dd>/);
+    assert.match(out, /<dt>Régime<\/dt><dd><a href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien<\/a>, <a href="\/\?regime=sans%20porc">sans porc<\/a><\/dd>/);
   });
 });

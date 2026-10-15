@@ -93,6 +93,29 @@ function linkRecipes(recipes) {
   }
 }
 
+// Valeurs (étiquettes, régimes…) comptées sur toutes les recettes : [{ name, count }], par fréquence
+// puis par nom. Les variantes de casse sont regroupées ; on garde la graphie la plus courante
+// (en minuscules à égalité).
+function countValues(recipes, valuesOf) {
+  const groups = new Map();
+  for (const r of recipes) {
+    for (const raw of new Set(valuesOf(r).map(String))) {
+      const value = raw.trim();
+      const key = normValue(value);
+      if (!key) continue;
+      const g = groups.get(key) || { count: 0, spellings: new Map() };
+      g.count++;
+      g.spellings.set(value, (g.spellings.get(value) || 0) + 1);
+      groups.set(key, g);
+    }
+  }
+  return [...groups.values()].map(g => {
+    const [name] = [...g.spellings].sort((a, b) => b[1] - a[1] || (a[0] === a[0].toLowerCase() ? -1 : 1))[0];
+    return { name, count: g.count };
+  }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+}
+const normValue = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+
 function createStore(dir) {
   let cache = null;
   let cachedAt = 0;
@@ -120,25 +143,10 @@ function createStore(dir) {
     all: load,
     get: slug => load().find(r => r.slug === slug),
     invalidate() { cache = null; },
-    // Toutes les étiquettes : [{ name, count }], par fréquence puis par nom. Les variantes de casse
-    // (« Four » / « four ») sont regroupées ; on affiche la graphie la plus courante (en minuscules à égalité).
-    tags() {
-      const groups = new Map();
-      for (const r of load()) {
-        for (const tag of new Set(r.tags.map(String))) {
-          const key = tag.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
-          if (!key) continue;
-          const g = groups.get(key) || { count: 0, spellings: new Map() };
-          g.count++;
-          g.spellings.set(tag.trim(), (g.spellings.get(tag.trim()) || 0) + 1);
-          groups.set(key, g);
-        }
-      }
-      return [...groups.values()].map(g => {
-        const [name] = [...g.spellings].sort((a, b) => b[1] - a[1] || (a[0] === a[0].toLowerCase() ? -1 : 1))[0];
-        return { name, count: g.count };
-      }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
-    },
+    // Toutes les étiquettes (voir countValues).
+    tags() { return countValues(load(), r => r.tags); },
+    // Régimes (clé `diet`, texte ou liste), comptés comme les étiquettes.
+    diets() { return countValues(load(), r => asList(r.meta.diet)); },
     grouped(keep = () => true) {
       const recipes = load().filter(keep);
       const known = COURSES.map(([key, label]) => ({ key, label, recipes: recipes.filter(r => r.course === key) }));
@@ -158,4 +166,4 @@ function createStore(dir) {
   };
 }
 
-module.exports = { createStore, fromSource, slugify, PHOTO_EXT, COURSES };
+module.exports = { normValue, asList, createStore, fromSource, slugify, PHOTO_EXT, COURSES };

@@ -320,3 +320,8 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
 /* Une pastille d'étiquette ne se coupe jamais en deux. */
 .tags .tag { white-space: nowrap; }
 .tag-cloud .tags { margin: 8px 0 0; }
+
+/* Régimes (filtre de l'accueil) */
+.diets { margin: 10px 0 0; font-size: .9rem; }
+.diets a { text-decoration: none; font-weight: 600; white-space: nowrap; }
+.diets .count { color: var(--muted); font-weight: 400; font-size: .85em; }

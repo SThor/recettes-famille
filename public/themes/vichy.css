@@ -86,3 +86,5 @@
 .theme-vichy .site-footer { border-top: 0; position: relative; padding-top: 34px; }
 .theme-vichy .site-footer::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: var(--gingham); }
 .theme-vichy .pane-preview .recipe::before { margin: 0; }
+/* Le bandeau d'accueil est centré pour le titre ; les filtres restent alignés à gauche, comme les catégories. */
+.theme-vichy .intro .tag-cloud, .theme-vichy .intro .diets, .theme-vichy .intro .tag-filter { text-align: left; }

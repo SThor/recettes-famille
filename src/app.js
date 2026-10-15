@@ -3,7 +3,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { createStore, slugify } = require('./recipes');
+const { createStore, slugify, normValue, asList } = require('./recipes');
 const views = require('./views');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
@@ -82,12 +82,15 @@ function createApp({
   // --- Tout le reste est réservé à la famille ---
   app.use((req, res, next) => (req.isFamily ? next() : res.redirect('/connexion')));
 
-  // Accueil, éventuellement filtré sur une étiquette (?tag=…, comparaison sans casse ni espaces superflus).
+  // Accueil, éventuellement filtré sur une étiquette (?tag=…) et/ou un régime (?regime=…),
+  // comparaisons sans casse ni espaces superflus.
   app.get('/', (req, res) => {
-    const norm = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
-    const tag = typeof req.query.tag === 'string' ? req.query.tag.trim() : '';
-    const groups = tag ? store.grouped(r => r.tags.some(x => norm(x) === norm(tag))) : store.grouped();
-    res.send(views.home({ groups, theme: req.theme, tag, tags: store.tags() }));
+    const param = name => (typeof req.query[name] === 'string' ? req.query[name].trim() : '');
+    const tag = param('tag');
+    const regime = param('regime');
+    const has = (values, wanted) => values.some(x => normValue(x) === normValue(wanted));
+    const groups = store.grouped(r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime)));
+    res.send(views.home({ groups, theme: req.theme, tag, regime, tags: store.tags(), diets: store.diets() }));
   });
 
   app.get('/recette/:slug', (req, res) => {

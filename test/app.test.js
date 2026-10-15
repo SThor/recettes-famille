@@ -108,6 +108,52 @@ test.describe('Site public (connecté)', () => {
     });
   });
 
+  test.describe('Filtre par régime', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const cardsOf = html => [...html.matchAll(/<li class="card"[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort();
+    const setMeta = (file, line) => fs.writeFileSync(path.join(t.recipesDir, file), t.read(file).replace(/^title: .*$/m, m => `${m}\n${line}`));
+
+    test.beforeEach(() => {
+      setMeta('Galette sèche.cook', 'diet: [végétarien, sans gluten]');
+      setMeta('Pounty.cook', 'diet: Sans porc');
+      fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\ndiet: végétarien\ntags: [pique-nique]\n---\n\nMélanger.\n');
+    });
+
+    test('rangée « Régimes » sur l\'accueil, avec compteurs', async () => {
+      const html = await get('/');
+      const row = html.slice(html.indexOf('<p class="diets">'), html.indexOf('</p>', html.indexOf('<p class="diets">')));
+      assert.match(row, /Régimes :/);
+      assert.match(row, /<a class="diet" href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien <span class="count">2<\/span><\/a>/);
+      assert.match(row, /<a class="diet" href="\/\?regime=sans%20gluten">sans gluten <span class="count">1<\/span><\/a>/);
+      assert.match(row, /<a class="diet" href="\/\?regime=Sans%20porc">Sans porc <span class="count">1<\/span><\/a>/);
+    });
+
+    test('l\'accueil ne garde que les recettes du régime, sans tenir compte des majuscules', async () => {
+      const html = await get('/?regime=V%C3%A9g%C3%A9tarien');
+      assert.deepEqual(cardsOf(html), ['galette-seche', 'salade']);
+      assert.match(html, /<p class="tag-filter">Régime : <b>Végétarien<\/b> · 2 recettes <a href="\/" aria-label="Voir toutes les recettes">✕<\/a><\/p>/);
+    });
+
+    test('régime et étiquette se combinent', async () => {
+      const html = await get('/?regime=v%C3%A9g%C3%A9tarien&tag=pique-nique');
+      assert.deepEqual(cardsOf(html), ['salade']);
+      assert.match(html, /Régime : <b>végétarien<\/b>/);
+      assert.match(html, /Étiquette : <b>pique-nique<\/b>/);
+    });
+
+    test('sur la page recette, chaque régime est un lien', async () => {
+      const html = await get('/recette/galette-seche');
+      assert.match(html, /<dt>Régime<\/dt><dd><a href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien<\/a>, <a href="\/\?regime=sans%20gluten">sans gluten<\/a><\/dd>/);
+    });
+
+    test('pas de régime renseigné : pas de rangée', async () => {
+      for (const f of ['Galette sèche.cook', 'Pounty.cook', 'Salade.cook']) {
+        fs.writeFileSync(path.join(t.recipesDir, f), t.read(f).replace(/^diet:.*\n/m, ''));
+      }
+      assert.doesNotMatch(await get('/'), /class="diets"/);
+    });
+  });
+
   test.describe('Recherche par étiquette', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
     const tagData = html => JSON.parse((html.match(/<script type="application\/json" id="tags-data">([\s\S]*?)<\/script>/) || [])[1] || 'null');
