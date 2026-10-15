@@ -164,7 +164,7 @@ form .button { width: 100%; }
 .admin-list input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; flex: none; transform: translateY(3px); }
 .todo > li { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .todo > li.done span { text-decoration: line-through; opacity: .55; }
-.icon { border: 0; background: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 2px 6px; }
+.icon-btn { border: 0; background: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 2px 6px; }
 .todo-add { margin-top: 16px; }
 form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); }
 .history { list-style: none; padding: 0; font-size: .9rem; }
@@ -394,16 +394,33 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
 .pill-remove:hover, .pill-remove:focus-visible { background: var(--accent); color: var(--surface); }
 .active-filters .clear-filters { font-size: .9rem; margin-left: 4px; }
 
+/* Repli du panneau (grand écran) : bouton icône dans l'en-tête du panneau, bouton de réouverture en tête des résultats */
+.icon { flex: none; vertical-align: -0.2em; }
+.filters-head h2 { flex: 1; }
 @media (min-width: 1000px) {
   .sidebar-toggle {
     display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer;
-    padding: 6px 14px; border-radius: 999px; color: var(--accent); background: var(--surface); border: 1px solid var(--border);
+    color: var(--accent); background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
   }
-  .sidebar-toggle::before { content: "☰"; font-size: .95em; }
-  .sidebar-toggle .when-closed, .sidebar-collapsed .sidebar-toggle .when-open { display: none; }
-  .sidebar-collapsed .sidebar-toggle .when-closed { display: inline; }
+  .sidebar-collapse { padding: 5px; border-radius: 8px; align-self: center; }
+  .sidebar-collapse:hover, .sidebar-expand:hover { background: var(--accent-soft); }
+  .sidebar-expand { display: none; padding: 6px 14px; }
+  .sidebar-collapsed .sidebar-expand { display: inline-flex; }
   .sidebar-toggle .count { background: var(--accent); color: var(--surface); border-radius: 999px; padding: 0 7px; font-size: .8rem; }
   .sidebar-collapsed .home-layout { grid-template-columns: minmax(0, 1fr); }
   .sidebar-collapsed .filters-panel { display: none; }
   .filters-panel { top: 76px; }
 }
+
+/* Icône chrono des minuteurs : l'aiguille tourne pendant le décompte, s'arrête en pause, l'icône s'agite à la fin */
+.timer .icon { margin-right: 3px; }
+.timer .icon-hand { transform-box: view-box; transform-origin: 12px 13px; }
+button.timer.running .icon-hand, button.timer.paused .icon-hand { animation: timer-hand 6s steps(12) infinite; }
+button.timer.paused .icon-hand { animation-play-state: paused; }
+button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; transform-origin: 50% 60%; }
+@keyframes timer-hand { to { transform: rotate(360deg); } }
+@keyframes timer-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+@media (prefers-reduced-motion: reduce) {
+  button.timer .icon-hand, button.timer.done .icon { animation: none; }
+}
+.filter-pill .icon { color: var(--accent); }

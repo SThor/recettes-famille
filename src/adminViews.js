@@ -102,7 +102,7 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
       </form>
       <form method="post" action="/admin/a-demander/suppr" onsubmit="return confirm('Retirer « ${esc(e.title.replace(/['\\]/g, '’'))} » de la liste ?')">
         <input type="hidden" name="id" value="${e.id}"><input type="hidden" name="titre" value="${esc(e.title)}">
-        <button class="icon" aria-label="Retirer">✕</button>
+        <button class="icon-btn" aria-label="Retirer">✕</button>
       </form>
     </li>`).join('')}
     </ul>`).join('') : '<p class="muted">Fichier « À demander.md » introuvable.</p>'}

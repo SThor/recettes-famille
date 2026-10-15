@@ -1,5 +1,6 @@
 const { slugify } = require('./recipes');
 const { toSeconds, formatMinutes } = require('./durations');
+const { icon } = require('./icons');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
 const ASSET_V = Date.now().toString(36);
 
@@ -72,6 +73,8 @@ const jsonForScript = data => JSON.stringify(data).replace(/</g, '\\u003c');
 // Crans du curseur de durée (minutes) ; le dernier cran = sans limite. Partagés avec public/app.js.
 const DUREE_STOPS = [5, 10, 15, 20, 25, 30, 40, 45, 50, 60, 75, 90, 120, 150, 180, 240];
 const DUREE_PRESETS = [15, 30, 60, 120];
+// Icône « barre latérale » (cadre avec une colonne à gauche), couleur du texte du bouton.
+const SIDEBAR_ICON = icon('sidebar');
 
 // URL de l'accueil à partir des filtres actuels (dans l'ordre de l'URL), avec des modifications :
 // valeur = remplacer/ajouter, null = retirer.
@@ -91,16 +94,17 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   // Filtres actifs en pastilles : une croix par filtre (retire ce filtre seulement),
   // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
   const active = [
-    regime && ['🥗', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
-    tag && ['🏷', `Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
-    duree && ['⏱', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
+    regime && ['leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
+    tag && ['tag', `Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
+    duree && ['timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
-  const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([icon, label, remove]) =>
-    `<li class="filter-pill"><span class="pill-label"><span aria-hidden="true">${icon}</span> ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
+  const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([iconName, label, remove]) =>
+    `<li class="filter-pill"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
   ${active.length && !count ? `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
-  const resultsHead = `<div class="results-head"><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true"><span class="when-open">Masquer les filtres</span><span class="when-closed">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</span></button></div>`;
+  // Le bouton « masquer » est dans l'en-tête du panneau ; celui-ci ne sert qu'à le rouvrir une fois replié.
+  const resultsHead = `<div class="results-head"><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p><button type="button" class="sidebar-toggle sidebar-expand" aria-controls="filtres" aria-expanded="true">${SIDEBAR_ICON} Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button></div>`;
 
   const dietRow = diets.length ? `<p class="diets">Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud">
@@ -126,7 +130,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
 <button type="button" class="filters-toggle" aria-controls="filtres" aria-expanded="false">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button>
 <div class="home-layout">
 <aside class="filters-panel" id="filtres" aria-label="Filtres">
-  <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}</div>
+  <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}<button type="button" class="sidebar-toggle sidebar-collapse" aria-controls="filtres" aria-expanded="true" aria-label="Masquer les filtres" title="Masquer les filtres">${SIDEBAR_ICON}</button></div>
   ${dietRow}
   ${dureeBlock}
   ${tagCloud}
@@ -179,7 +183,7 @@ function stepHtml(parts, ctx = { timer: 0 }) {
     }
     if (p.type === 'cookware') return `<span class="tool">${esc(p.name)}</span>`;
     const duration = `${p.quantity}${p.unit ? ' ' + p.unit : ''}`;
-    const label = `⏲&nbsp;${p.name ? `${esc(p.name)} : ` : ''}${esc(duration)}`;
+    const label = `${icon('timer', 16)}<span class="timer-text">${p.name ? `${esc(p.name)} : ` : ''}${esc(duration)}</span>`;
     // Durée lisible : bouton qui lance un compte à rebours (public/app.js), sinon simple texte.
     const seconds = toSeconds(p.quantity, p.unit);
     return seconds

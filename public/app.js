@@ -227,7 +227,9 @@ if (recipe) {
       btn.classList.toggle('running', Boolean(t.endAt));
       btn.classList.toggle('paused', !t.endAt && !t.done);
       btn.classList.toggle('done', t.done);
-      btn.innerHTML = `⏲&nbsp;${t.done ? 'Terminé !' : clock(left)}`;
+      // Seul le texte change : l'icône garde son animation (aiguille qui tourne, pause, fin).
+      const text = btn.querySelector('.timer-text');
+      if (text) text.textContent = t.done ? 'Terminé !' : clock(left);
       btn.title = t.done ? 'Arrêter' : t.endAt ? 'Mettre en pause' : 'Reprendre';
     }
     renderTray(now);
@@ -362,18 +364,22 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
   input.addEventListener('blur', () => setTimeout(close, 150));
 })();
 
-// Grand écran : replier / déplier le panneau de filtres (mémorisé sur l'appareil).
+// Grand écran : replier le panneau (bouton dans son en-tête) / le rouvrir (bouton en tête des résultats),
+// état mémorisé sur l'appareil.
 (() => {
-  const btn = document.querySelector('.sidebar-toggle');
-  if (!btn) return;
+  const collapseBtn = document.querySelector('.sidebar-collapse');
+  const expandBtn = document.querySelector('.sidebar-expand');
+  if (!collapseBtn || !expandBtn) return;
   const KEY = 'filtres-replies';
-  const set = collapsed => {
+  const set = (collapsed, focus) => {
     document.body.classList.toggle('sidebar-collapsed', collapsed);
-    btn.setAttribute('aria-expanded', String(!collapsed));
+    for (const b of [collapseBtn, expandBtn]) b.setAttribute('aria-expanded', String(!collapsed));
     try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch {}
+    if (focus) (collapsed ? expandBtn : collapseBtn).focus();
   };
   let saved = false;
   try { saved = localStorage.getItem(KEY) === '1'; } catch {}
   if (saved) set(true);
-  btn.addEventListener('click', () => set(!document.body.classList.contains('sidebar-collapsed')));
+  collapseBtn.addEventListener('click', () => set(true, true));
+  expandBtn.addEventListener('click', () => set(false, true));
 })();

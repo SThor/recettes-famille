@@ -96,7 +96,7 @@ test.describe('Affichage', () => {
   });
 
   test('minuteur nommé affiché', () => {
-    assert.match(html(), /⏲&nbsp;cuisson : 45 minutes/);
+    assert.match(html(), /<span class="timer-text">cuisson : 45 minutes<\/span>/);
   });
 
   test('temps de repos (clé maison « rest time ») et temps total (« time »)', () => {

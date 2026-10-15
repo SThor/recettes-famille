@@ -87,7 +87,7 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes portant l\'étiquette', async () => {
       const html = await get('/?tag=auvergne');
       assert.deepEqual(cardsOf(html), ['pounty']);
-      assert.match(html, /<li class="filter-pill"><span class="pill-label"><span aria-hidden="true">🏷<\/span> Étiquette : <b>auvergne<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
+      assert.match(html, /<li class="filter-pill"><span class="pill-label"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquette : <b>auvergne<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
       assert.match(html, /<p class="results-count"><b>1<\/b> recette<\/p>/);
     });
 
@@ -133,7 +133,7 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes du régime, sans tenir compte des majuscules', async () => {
       const html = await get('/?regime=V%C3%A9g%C3%A9tarien');
       assert.deepEqual(cardsOf(html), ['galette-seche', 'salade']);
-      assert.match(html, /<li class="filter-pill"><span class="pill-label"><span aria-hidden="true">🥗<\/span> Régime : <b>Végétarien<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
+      assert.match(html, /<li class="filter-pill"><span class="pill-label"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régime : <b>Végétarien<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
       assert.match(html, /<p class="results-count"><b>2<\/b> recettes<\/p>/);
     });
 
@@ -180,7 +180,7 @@ test.describe('Site public (connecté)', () => {
     test('durée max sur le temps total', async () => {
       const html = await get('/?duree=30');
       assert.deepEqual(cardsOf(html), ['salade']);
-      assert.match(html, /Durée : <b>30 min max<\/b> \(temps total\)/);
+      assert.match(html, /<svg class="icon icon-timer"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Durée : <b>30 min max<\/b> \(temps total\)/);
       assert.match(html, /1 recette sans durée n’est pas comptée\./);
     });
 
@@ -233,9 +233,15 @@ test.describe('Site public (connecté)', () => {
       assert.ok(pos('<div class="home-results">') < pos('<nav class="chips">'), 'catégories dans la colonne des résultats');
     });
 
-    test('compteur de recettes et bouton pour replier le panneau (grand écran)', async () => {
-      const html = await get('/');
-      assert.match(html, /<div class="results-head"><p class="results-count"><b>2<\/b> recettes<\/p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true">/);
+    test('bouton « masquer » dans l\'en-tête du panneau, icône barre latérale', async () => {
+      const panel = panelOf(await get('/'));
+      const head = panel.slice(panel.indexOf('<div class="filters-head">'), panel.indexOf('</div>', panel.indexOf('<div class="filters-head">')));
+      assert.match(head, /<button type="button" class="sidebar-toggle sidebar-collapse" aria-controls="filtres" aria-expanded="true" aria-label="Masquer les filtres" title="Masquer les filtres"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"/);
+    });
+
+    test('compteur de recettes et bouton pour rouvrir le panneau replié (grand écran)', async () => {
+      const html = await get('/?tag=auvergne');
+      assert.match(html, /<div class="results-head"><p class="results-count"><b>1<\/b> recette<\/p><button type="button" class="sidebar-toggle sidebar-expand" aria-controls="filtres" aria-expanded="true"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"[\s\S]*?<\/svg> Filtres <span class="count">1<\/span><\/button><\/div>/);
     });
 
     test('bouton « Filtres » pour mobile, avec le nombre de filtres actifs', async () => {
