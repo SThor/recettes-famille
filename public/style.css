@@ -256,3 +256,29 @@ form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-
 .recipe-ref { font-weight: 600; }
 .ing-note { color: var(--muted); font-size: .9em; }
 .qty.fixed { font-style: normal; }
+
+/* Minuteurs cliquables */
+button.timer {
+  font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; white-space: nowrap;
+  background: var(--accent-soft); border: 0; border-radius: 999px; padding: 0 8px; margin: 0 1px;
+}
+button.timer.running { background: var(--accent); color: var(--surface); font-variant-numeric: tabular-nums; }
+button.timer.paused { outline: 1.5px dashed var(--accent); }
+button.timer.done { background: #c0392b; color: #fff; animation: timer-blink 1s steps(2) infinite; }
+@keyframes timer-blink { 50% { opacity: .55; } }
+.timer-tray {
+  position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20;
+  width: min(440px, calc(100% - 24px)); display: grid; gap: 6px;
+}
+.timer-row {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  box-shadow: 0 6px 20px -8px rgb(0 0 0 / .35);
+}
+.timer-row.done { border-color: #c0392b; }
+.timer-row button { font: inherit; border: 0; background: none; cursor: pointer; color: var(--text); }
+.timer-name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 0; }
+.timer-time { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent) !important; padding: 4px 6px; }
+.timer-row.done .timer-time { color: #c0392b !important; }
+.timer-stop { color: var(--muted) !important; padding: 4px 8px; }
+body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }

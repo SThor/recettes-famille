@@ -1,4 +1,5 @@
 const { slugify } = require('./recipes');
+const { toSeconds } = require('./durations');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
 const ASSET_V = Date.now().toString(36);
 
@@ -98,8 +99,13 @@ function stepHtml(parts) {
       return `<span class="ing">${ingName(p)}${amount}</span>`;
     }
     if (p.type === 'cookware') return `<span class="tool">${esc(p.name)}</span>`;
-    const duration = `${esc(p.quantity)}${p.unit ? ' ' + esc(p.unit) : ''}`;
-    return `<span class="timer">⏲&nbsp;${p.name ? `${esc(p.name)} : ` : ''}${duration}</span>`;
+    const duration = `${p.quantity}${p.unit ? ' ' + p.unit : ''}`;
+    const label = `⏲&nbsp;${p.name ? `${esc(p.name)} : ` : ''}${esc(duration)}`;
+    // Durée lisible : bouton qui lance un compte à rebours (public/app.js), sinon simple texte.
+    const seconds = toSeconds(p.quantity, p.unit);
+    return seconds
+      ? `<button type="button" class="timer" data-seconds="${seconds}" data-label="${esc(p.name || duration)}">${label}</button>`
+      : `<span class="timer">${label}</span>`;
   }).join('');
 }
 
