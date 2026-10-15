@@ -103,12 +103,12 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
   ${active.length && !count ? `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
-  // Le bouton « masquer » est dans l'en-tête du panneau ; celui-ci ne sert qu'à le rouvrir une fois replié.
-  const resultsHead = `<div class="results-head"><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p><button type="button" class="sidebar-toggle sidebar-expand" aria-controls="filtres" aria-expanded="true">${SIDEBAR_ICON} Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button></div>`;
+  // Un seul bouton pour replier / déplier le panneau, fixe en tête des résultats : il reste sous le curseur.
+  const resultsHead = `<div class="results-head"><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres">${SIDEBAR_ICON} Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button></div>`;
 
-  const dietRow = diets.length ? `<p class="diets">Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
+  const dietRow = diets.length ? `<p class="diets">${icon('leaf', 16)} Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud">
-    <summary>Étiquettes <span class="count">${tags.length}</span></summary>
+    <summary>${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
     <div class="tags">${tags.map(x => `<a class="tag" href="${esc(homeUrl(params, { tag: x.name }))}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
 
@@ -116,7 +116,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   const found = duree ? DUREE_STOPS.findIndex(s => s >= duree) : -1;
   const stopIndex = found === -1 ? DUREE_STOPS.length : found;
   const dureeBlock = `<div class="duree">
-    <label for="duree-range">Durée max : <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
+    <label for="duree-range">${icon('timer', 16)} Durée max : <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
     <input type="range" id="duree-range" min="0" max="${DUREE_STOPS.length}" step="1" value="${stopIndex}" data-stops="${DUREE_STOPS.join(',')}">
     <div class="duree-presets">${DUREE_PRESETS.map(m => `<a class="duree-preset" data-minutes="${m}" href="${esc(homeUrl(params, { duree: m }))}">${formatMinutes(m)}</a>`).join('')}</div>
     <label class="duree-prep"><input type="checkbox" id="duree-prep" ${temps === 'prep' ? 'checked' : ''}> Préparation seulement</label>
@@ -130,7 +130,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
 <button type="button" class="filters-toggle" aria-controls="filtres" aria-expanded="false">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button>
 <div class="home-layout">
 <aside class="filters-panel" id="filtres" aria-label="Filtres">
-  <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}<button type="button" class="sidebar-toggle sidebar-collapse" aria-controls="filtres" aria-expanded="true" aria-label="Masquer les filtres" title="Masquer les filtres">${SIDEBAR_ICON}</button></div>
+  <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}</div>
   ${dietRow}
   ${dureeBlock}
   ${tagCloud}
@@ -246,7 +246,7 @@ function recipeArticle(r, { back = true } = {}) {
   ${r.photo ? `<img class="hero" src="/photos/${enc(r.photo)}" alt="${esc(r.title)}">` : ''}
   <h1>${esc(r.title)}</h1>
   ${m.description ? `<p class="description">${esc(m.description)}</p>` : ''}
-  ${r.tags.length ? `<p class="tags">${r.tags.map(t => `<a class="tag" href="/?tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join('')}</p>` : ''}
+  ${r.tags.length ? `<p class="tags">${icon('tag', 16)}${r.tags.map(t => `<a class="tag" href="/?tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join('')}</p>` : ''}
   ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
   ${relatedHtml(r.related)}
 

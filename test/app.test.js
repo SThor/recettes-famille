@@ -78,6 +78,10 @@ test.describe('Site public (connecté)', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
     const cardsOf = html => [...html.matchAll(/<li class="card"(?![^>]*\bhidden\b)[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort(); // cartes visibles
 
+    test('sur la page recette, la rangée d\'étiquettes commence par l\'icône étiquette', async () => {
+      assert.match(await get('/recette/pounty'), /<p class="tags"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg><a class="tag"/);
+    });
+
     test('sur la page recette, chaque étiquette mène à l\'accueil filtré', async () => {
       const html = await get('/recette/galette-seche');
       assert.match(html, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois<\/a>/);
@@ -210,6 +214,13 @@ test.describe('Site public (connecté)', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
     const panelOf = html => html.slice(html.indexOf('<aside class="filters-panel"'), html.indexOf('</aside>'));
 
+    test('titres du panneau avec leur icône (régime, durée)', async () => {
+      fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\ndiet: végétarien\n---\n\nMélanger.\n');
+      const panel = panelOf(await get('/'));
+      assert.match(panel, /<p class="diets"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régimes :/);
+      assert.match(panel, /<label for="duree-range"><svg class="icon icon-timer"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Durée max :/);
+    });
+
     test('régimes, durée et étiquettes sont dans le panneau', async () => {
       const panel = panelOf(await get('/'));
       assert.match(panel, /^<aside class="filters-panel" id="filtres" aria-label="Filtres">/);
@@ -233,15 +244,10 @@ test.describe('Site public (connecté)', () => {
       assert.ok(pos('<div class="home-results">') < pos('<nav class="chips">'), 'catégories dans la colonne des résultats');
     });
 
-    test('bouton « masquer » dans l\'en-tête du panneau, icône barre latérale', async () => {
-      const panel = panelOf(await get('/'));
-      const head = panel.slice(panel.indexOf('<div class="filters-head">'), panel.indexOf('</div>', panel.indexOf('<div class="filters-head">')));
-      assert.match(head, /<button type="button" class="sidebar-toggle sidebar-collapse" aria-controls="filtres" aria-expanded="true" aria-label="Masquer les filtres" title="Masquer les filtres"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"/);
-    });
-
-    test('compteur de recettes et bouton pour rouvrir le panneau replié (grand écran)', async () => {
+    test('un seul bouton pour replier / déplier, fixe en tête des résultats (grand écran)', async () => {
       const html = await get('/?tag=auvergne');
-      assert.match(html, /<div class="results-head"><p class="results-count"><b>1<\/b> recette<\/p><button type="button" class="sidebar-toggle sidebar-expand" aria-controls="filtres" aria-expanded="true"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"[\s\S]*?<\/svg> Filtres <span class="count">1<\/span><\/button><\/div>/);
+      assert.match(html, /<div class="results-head"><p class="results-count"><b>1<\/b> recette<\/p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"[\s\S]*?<\/svg> Filtres <span class="count">1<\/span><\/button><\/div>/);
+      assert.equal((html.match(/class="sidebar-toggle/g) || []).length, 1, 'plus de bouton dans le panneau');
     });
 
     test('bouton « Filtres » pour mobile, avec le nombre de filtres actifs', async () => {
@@ -269,7 +275,7 @@ test.describe('Site public (connecté)', () => {
       const html = await get('/');
       const block = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
       assert.match(block, /^<details class="tag-cloud">/);
-      assert.match(block, /<summary>Étiquettes <span class="count">3<\/span><\/summary>/);
+      assert.match(block, /<summary><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquettes <span class="count">3<\/span><\/summary>/);
       assert.match(block, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois <span class="count">1<\/span><\/a>/);
     });
 

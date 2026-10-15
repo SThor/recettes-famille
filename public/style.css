@@ -402,10 +402,9 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
     display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer;
     color: var(--accent); background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
   }
-  .sidebar-collapse { padding: 5px; border-radius: 8px; align-self: center; }
-  .sidebar-collapse:hover, .sidebar-expand:hover { background: var(--accent-soft); }
-  .sidebar-expand { display: none; padding: 6px 14px; }
-  .sidebar-collapsed .sidebar-expand { display: inline-flex; }
+  .sidebar-toggle { padding: 6px 14px; }
+  .sidebar-toggle:hover { background: var(--accent-soft); }
+  .sidebar-toggle[aria-expanded="true"] { background: var(--accent-soft); border-color: transparent; }
   .sidebar-toggle .count { background: var(--accent); color: var(--surface); border-radius: 999px; padding: 0 7px; font-size: .8rem; }
   .sidebar-collapsed .home-layout { grid-template-columns: minmax(0, 1fr); }
   .sidebar-collapsed .filters-panel { display: none; }
@@ -424,3 +423,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
   button.timer .icon-hand, button.timer.done .icon { animation: none; }
 }
 .filter-pill .icon { color: var(--accent); }
+/* Icônes des titres du panneau et de la rangée d'étiquettes d'une recette */
+.filters-panel .icon, .tags > .icon { color: var(--accent); }
+.tags > .icon { align-self: center; margin-right: 2px; }
