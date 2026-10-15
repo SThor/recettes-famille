@@ -429,3 +429,21 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 
 /* Ligne d'outils de l'accueil : bouton du panneau à gauche, puis le nombre de recettes */
 .results-head { justify-content: flex-start; margin: 4px 0 10px; }
+
+/* Panneau de filtres : trois titres identiques (icône, libellé, compteur), régimes et étiquettes dépliables */
+.filters-panel .filter-title {
+  display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;
+  font-family: var(--font); font-size: .95rem; font-weight: 700; color: var(--text);
+}
+.filters-panel .filter-title .icon { color: var(--accent); }
+.filters-panel .filter-title .count, .filters-panel .filter-title output { font-weight: 400; color: var(--muted); font-size: .85rem; }
+.filters-panel .filter-title output { margin-left: auto; color: var(--accent); font-weight: 600; }
+.filters-panel details > summary.filter-title { list-style: none; }
+.filters-panel details > summary.filter-title::-webkit-details-marker { display: none; }
+.filters-panel details > summary.filter-title::after { content: "›"; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.filters-panel details[open] > summary.filter-title::after { transform: rotate(90deg); }
+.filters-panel .diets, .filters-panel .duree, .filters-panel .tag-cloud { margin: 0; padding: 10px 0; border-top: 1px solid var(--border); }
+.filters-panel .diets .tags, .filters-panel .tag-cloud .tags { margin: 8px 0 0; }
+.filters-panel .diets .diet { font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap; font-weight: 400; }
+.filters-panel .duree .filter-title { cursor: default; margin-bottom: 6px; }
+.filters-panel details > summary.filter-title { display: flex; background: none; padding: 0; border-radius: 0; }

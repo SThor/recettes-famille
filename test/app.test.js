@@ -125,10 +125,10 @@ test.describe('Site public (connecté)', () => {
       fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\ndiet: végétarien\ntags: [pique-nique]\n---\n\nMélanger.\n');
     });
 
-    test('rangée « Régimes » sur l\'accueil, avec compteurs', async () => {
+    test('bloc « Régimes » dépliable sur l\'accueil, avec compteurs', async () => {
       const html = await get('/');
-      const row = html.slice(html.indexOf('<p class="diets">'), html.indexOf('</p>', html.indexOf('<p class="diets">')));
-      assert.match(row, /Régimes :/);
+      const row = html.slice(html.indexOf('<details class="diets">'), html.indexOf('</details>', html.indexOf('<details class="diets">')));
+      assert.match(row, /<summary class="filter-title"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régimes <span class="count">3<\/span><\/summary>/);
       assert.match(row, /<a class="diet" href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien <span class="count">2<\/span><\/a>/);
       assert.match(row, /<a class="diet" href="\/\?regime=sans%20gluten">sans gluten <span class="count">1<\/span><\/a>/);
       assert.match(row, /<a class="diet" href="\/\?regime=Sans%20porc">Sans porc <span class="count">1<\/span><\/a>/);
@@ -217,8 +217,10 @@ test.describe('Site public (connecté)', () => {
     test('titres du panneau avec leur icône (régime, durée)', async () => {
       fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\ndiet: végétarien\n---\n\nMélanger.\n');
       const panel = panelOf(await get('/'));
-      assert.match(panel, /<p class="diets"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régimes :/);
-      assert.match(panel, /<label for="duree-range"><svg class="icon icon-timer"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Durée max :/);
+      // Les trois titres ont la même forme : classe filter-title, icône, libellé.
+      assert.match(panel, /<summary class="filter-title"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régimes /);
+      assert.match(panel, /<label class="filter-title" for="duree-range"><svg class="icon icon-timer"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Durée max <output id="duree-label">sans limite<\/output><\/label>/);
+      assert.match(panel, /<summary class="filter-title"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquettes /);
     });
 
     test('régimes, durée et étiquettes sont dans le panneau', async () => {
@@ -276,14 +278,15 @@ test.describe('Site public (connecté)', () => {
       const html = await get('/');
       const block = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
       assert.match(block, /^<details class="tag-cloud">/);
-      assert.match(block, /<summary><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquettes <span class="count">3<\/span><\/summary>/);
+      assert.match(block, /<summary class="filter-title"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquettes <span class="count">3<\/span><\/summary>/);
       assert.match(block, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois <span class="count">1<\/span><\/a>/);
     });
 
     test('le bloc liste toutes les étiquettes même quand un filtre est actif', async () => {
       const html = await get('/?tag=auvergne');
       assert.equal(tagData(html).length, 3);
-      assert.match(html, /<details class="tag-cloud">[\s\S]*galette des rois/);
+      // Ouvert d'office puisqu'une étiquette est filtrée
+      assert.match(html, /<details class="tag-cloud" open>[\s\S]*galette des rois/);
     });
 
     test('barre de recherche prête pour les suggestions (combobox)', async () => {

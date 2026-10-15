@@ -107,9 +107,14 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   // il ne bouge pas quand le panneau se replie) et nombre de recettes.
   const resultsHead = `<div class="results-head"><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres">${SIDEBAR_ICON} Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p></div>`;
 
-  const dietRow = diets.length ? `<p class="diets">${icon('leaf', 16)} Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
-  const tagCloud = tags.length ? `<details class="tag-cloud">
-    <summary>${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
+  // Les trois filtres du panneau ont le même titre (.filter-title : icône, libellé, compteur) ;
+  // régimes et étiquettes sont dépliables, ouverts d'office quand un de leurs filtres est actif.
+  const dietRow = diets.length ? `<details class="diets"${regime ? ' open' : ''}>
+    <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
+    <div class="tags">${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join('')}</div>
+  </details>` : '';
+  const tagCloud = tags.length ? `<details class="tag-cloud"${tag ? ' open' : ''}>
+    <summary class="filter-title">${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
     <div class="tags">${tags.map(x => `<a class="tag" href="${esc(homeUrl(params, { tag: x.name }))}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
 
@@ -117,7 +122,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   const found = duree ? DUREE_STOPS.findIndex(s => s >= duree) : -1;
   const stopIndex = found === -1 ? DUREE_STOPS.length : found;
   const dureeBlock = `<div class="duree">
-    <label for="duree-range">${icon('timer', 16)} Durée max : <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
+    <label class="filter-title" for="duree-range">${icon('timer', 16)} Durée max <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
     <input type="range" id="duree-range" min="0" max="${DUREE_STOPS.length}" step="1" value="${stopIndex}" data-stops="${DUREE_STOPS.join(',')}">
     <div class="duree-presets">${DUREE_PRESETS.map(m => `<a class="duree-preset" data-minutes="${m}" href="${esc(homeUrl(params, { duree: m }))}">${formatMinutes(m)}</a>`).join('')}</div>
     <label class="duree-prep"><input type="checkbox" id="duree-prep" ${temps === 'prep' ? 'checked' : ''}> Préparation seulement</label>
