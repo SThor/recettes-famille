@@ -204,6 +204,54 @@ test.describe('Admin', () => {
       const res = await t.admin('/admin/apercu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: '---\ntitle: T\n---\n\n@sel{}' }) });
       assert.match(await res.text(), /class="ing">sel/);
     });
+
+    test.describe('Disposition original / formulaire / aperçu', () => {
+      const editorHtml = async slug => (await t.admin(`/admin/recettes/${slug}`)).text();
+      const between = (html, cls) => html.split(`class="${cls}"`)[1] || '';
+
+      test('affiche la fiche d\'origine de la recette dans sa colonne', async () => {
+        const html = await editorHtml('galette-seche');
+        assert.match(html, /class="editor-layout has-original"/);
+        assert.match(between(html, 'pane-original'), /<img[^>]+src="\/photos\/Originaux\/galette\.jpg"/);
+      });
+
+      test('ordre des colonnes : original, formulaire, aperçu', async () => {
+        const html = await editorHtml('galette-seche');
+        const pos = ['pane-original', 'pane-form', 'pane-preview'].map(c => html.indexOf(`class="${c}"`));
+        assert.ok(pos.every(p => p > 0), pos.join());
+        assert.deepEqual([...pos].sort((a, b) => a - b), pos);
+      });
+
+      test('l\'aperçu est déjà rendu à l\'ouverture', async () => {
+        const preview = between(await editorHtml('pounty'), 'pane-preview');
+        assert.match(preview, /<article class="recipe"/);
+        assert.match(preview, /lardons/);
+      });
+
+      test('sans fiche d\'origine : pas de colonne original', async () => {
+        const html = await editorHtml('pounty');
+        assert.match(html, /class="editor-layout"/);
+        assert.doesNotMatch(html, /class="pane-original"/);
+      });
+
+      test('proposition : ses photos servent d\'original', async () => {
+        const id = '2026-10-15T11-00-00-000Z-def456';
+        const dir = path.join(t.submissionsDir, id);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, 'photo-1.jpg'), 'x');
+        fs.writeFileSync(path.join(dir, 'recette.json'), JSON.stringify({ prenom: 'A', titre: 'B', texte: 'C', photos: ['photo-1.jpg'], date: 'd' }));
+        const html = await (await t.admin(`/admin/propositions/${id}`)).text();
+        assert.match(between(html, 'pane-original'), new RegExp(`src="/admin/fichiers/${id}/photo-1\\.jpg"`));
+        assert.match(between(html, 'pane-preview'), /<article class="recipe"/);
+      });
+
+      test('aperçu d\'un en-tête invalide : message d\'erreur au lieu d\'un plantage', async () => {
+        const src = t.read('Pounty.cook');
+        const fd = new FormData(); fd.set('source', '---\ntitle: [x\n---\n'); fd.set('base', sha1(src));
+        const html = await (await t.admin('/admin/recettes/pounty', { method: 'POST', body: fd })).text();
+        assert.match(between(html, 'pane-preview'), /class="error"/);
+      });
+    });
   });
 
   test.describe('Propositions', () => {

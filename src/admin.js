@@ -102,6 +102,22 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     return r;
   }
 
+  // Aperçu rendu côté serveur (affiché dès l'ouverture de l'éditeur).
+  function previewHtml(source) {
+    try {
+      return views.recipeArticle(fromSource(String(source || ''), 'apercu.cook', null), { back: false });
+    } catch (err) {
+      return `<p class="error">${views.esc(err.message)}</p>`;
+    }
+  }
+  const proposalImages = p => p.photos.map(f => `/admin/fichiers/${encodeURIComponent(p.id)}/${encodeURIComponent(f)}`);
+  const recipeImages = r => (r ? r.originals.filter(o => store.imagePath(o)).map(o => `/photos/${views.enc(o)}`) : []);
+  const renderEditor = opts => adminViews.editor({
+    ...opts,
+    originals: opts.proposal ? proposalImages(opts.proposal) : recipeImages(opts.recipe),
+    preview: previewHtml(opts.source),
+  });
+
   async function savePlatPhoto(file, baseName) {
     const ext = path.extname(file.originalname).toLowerCase();
     const finalExt = PHOTO_EXT.includes(ext) ? ext : '.jpg';
@@ -138,7 +154,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   router.get('/propositions/:id', (req, res) => {
     const p = readProposal(req.params.id);
     if (!p) return back(res, 'propositions', 'Proposition introuvable (déjà traitée ?)');
-    res.send(adminViews.editor({
+    res.send(renderEditor({
       theme: req.theme, title: `Proposition : ${p.titre}`, action: `/admin/propositions/${encodeURIComponent(p.id)}/publier`,
       source: templateFor(p), fichier: safeFileName(p.titre), isNew: true, proposal: p,
     }));
@@ -149,7 +165,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     if (!p) return back(res, 'propositions', 'Proposition introuvable (déjà traitée ?)');
     let source = String(req.body.source || '').replace(/\r\n/g, '\n');
     const fichier = safeFileName(String(req.body.fichier || ''));
-    const again = error => res.status(400).send(adminViews.editor({
+    const again = error => res.status(400).send(renderEditor({
       theme: req.theme, title: `Proposition : ${p.titre}`, action: req.originalUrl,
       source, fichier, isNew: true, proposal: p, error,
     }));
@@ -196,13 +212,13 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   const NEW_TEMPLATE = ['---', 'title: ', 'author: ', 'source: ', 'servings: ', 'course: plat', 'tags: []', 'prep time: ', 'cook time: ', 'verifie:', '---', '', 'Mélanger la @farine{250%g} et les @œufs{3} dans un #saladier{}.', '', 'Cuire ~{30%minutes}.', ''].join('\n');
 
   router.get('/recettes/nouvelle', (req, res) => {
-    res.send(adminViews.editor({ theme: req.theme, title: 'Nouvelle recette', action: '/admin/recettes/nouvelle', source: NEW_TEMPLATE, fichier: '', isNew: true }));
+    res.send(renderEditor({ theme: req.theme, title: 'Nouvelle recette', action: '/admin/recettes/nouvelle', source: NEW_TEMPLATE, fichier: '', isNew: true }));
   });
 
   router.post('/recettes/nouvelle', upload.single('photo_plat'), async (req, res, next) => {
     const source = String(req.body.source || '').replace(/\r\n/g, '\n');
     const fichier = safeFileName(String(req.body.fichier || ''));
-    const again = error => res.status(400).send(adminViews.editor({ theme: req.theme, title: 'Nouvelle recette', action: '/admin/recettes/nouvelle', source, fichier, isNew: true, error }));
+    const again = error => res.status(400).send(renderEditor({ theme: req.theme, title: 'Nouvelle recette', action: '/admin/recettes/nouvelle', source, fichier, isNew: true, error }));
     try {
       const r = validate(source);
       if (!fichier) return again('Il manque le nom du fichier.');
@@ -224,9 +240,9 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     const r = store.get(req.params.slug);
     if (!r) return back(res, 'recettes', 'Recette introuvable.');
     const source = fs.readFileSync(path.join(dir, r.file), 'utf8');
-    res.send(adminViews.editor({
+    res.send(renderEditor({
       theme: req.theme, title: r.title, action: `/admin/recettes/${r.slug}`,
-      source, base: hash(source), fichier: r.file, photo: r.photo,
+      source, base: hash(source), fichier: r.file, photo: r.photo, recipe: r,
     }));
   });
 
@@ -239,9 +255,9 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     // On garde les fins de ligne du fichier d'origine.
     let source = String(req.body.source || '').replace(/\r\n/g, '\n');
     if (current.includes('\r\n')) source = source.replace(/\n/g, '\r\n');
-    const again = (error, showCurrent) => res.status(400).send(adminViews.editor({
+    const again = (error, showCurrent) => res.status(400).send(renderEditor({
       theme: req.theme, title: r0.title, action: req.originalUrl, source, base: hash(current),
-      fichier: r0.file, photo: r0.photo, error, current: showCurrent ? current : null,
+      fichier: r0.file, photo: r0.photo, recipe: r0, error, current: showCurrent ? current : null,
     }));
     if (req.body.base !== hash(current)) {
       return again('La recette a été modifiée ailleurs pendant que tu l\'éditais (synchro Obsidian ?). Ton texte est ci-dessous ; compare avec la version actuelle en bas avant d\'enregistrer.', true);

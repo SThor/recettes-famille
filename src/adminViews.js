@@ -92,41 +92,57 @@ const COOK_HELP = `<details class="help"><summary>Aide Cooklang</summary>
   <li>Ligne vide = nouvelle étape · <code>&gt; texte</code> note ou anecdote · <code>-- texte</code> commentaire invisible</li>
 </ul></details>`;
 
-function editor({ theme, title, action, source, base, fichier, isNew, proposal, error, current, photo }) {
+// Éditeur en trois volets : original (fiche d'origine / proposition), formulaire, aperçu.
+// Ordre du DOM = ordre de lecture sur mobile ; les colonnes se forment selon la largeur (CSS).
+function editor({ theme, title, action, source, base, fichier, isNew, proposal, error, current, photo, originals = [], preview = '' }) {
+  const hasOriginal = originals.length > 0 || Boolean(proposal);
   const body = `
 <section class="admin editor">
   <a class="back" href="${proposal ? '/admin#propositions' : '/admin#recettes'}">← Suivi</a>
   <h1>${esc(title)}</h1>
   ${error ? `<p class="error">${esc(error)}</p>` : ''}
-  ${proposal ? proposalBlock(proposal) : ''}
-  <form method="post" action="${action}" enctype="multipart/form-data" id="editor-form">
-    ${base ? `<input type="hidden" name="base" value="${esc(base)}">` : ''}
-    ${isNew ? `<label>Nom du fichier <small>(sans .cook)</small><input name="fichier" required value="${esc(fichier)}"></label>` : `<p class="muted small">Fichier : ${esc(fichier)}</p>`}
-    ${proposal && proposal.photos.length ? `<fieldset class="roles"><legend>Que faire des photos ?</legend>
-      ${proposal.photos.map(p => `<div class="role">
-        <img src="/admin/fichiers/${enc(proposal.id)}/${enc(p)}" alt="">
-        <select name="role:${esc(p)}">
-          <option value="original">Fiche d'origine</option>
-          <option value="plat">Photo du plat</option>
-          <option value="ignorer">Ignorer</option>
-        </select></div>`).join('')}
-    </fieldset>` : ''}
-    <label>Recette (Cooklang)<textarea name="source" rows="22" spellcheck="false" class="code">${esc(source)}</textarea></label>
-    ${COOK_HELP}
-    ${!proposal ? `<label>Photo du plat ${photo ? `<small>(remplace l'actuelle)</small>` : '<small>(facultatif)</small>'}<input type="file" name="photo_plat" accept="image/*"></label>
-      ${photo ? `<img class="thumb" src="/photos/${enc(photo)}" alt="">` : ''}` : ''}
-    <div class="editor-actions">
-      <button type="button" class="button secondary" id="preview-btn">Aperçu</button>
-      <button class="button">${proposal ? 'Publier la recette' : 'Enregistrer'}</button>
+  <div class="editor-layout${hasOriginal ? ' has-original' : ''}">
+    ${hasOriginal ? `<aside class="pane-original">
+      <details open id="original-box">
+        <summary>${proposal ? 'Proposition' : 'Fiche d’origine'}${originals.length > 1 ? ` (${originals.length} photos)` : ''}</summary>
+        ${proposal ? proposalBlock(proposal) : ''}
+        ${originals.map(src => `<a href="${src}" target="_blank" title="Ouvrir en grand"><img src="${src}" alt="Fiche d'origine" loading="lazy"></a>`).join('')}
+      </details>
+    </aside>` : ''}
+    <div class="pane-form">
+      <form method="post" action="${action}" enctype="multipart/form-data" id="editor-form">
+        ${base ? `<input type="hidden" name="base" value="${esc(base)}">` : ''}
+        ${isNew ? `<label>Nom du fichier <small>(sans .cook)</small><input name="fichier" required value="${esc(fichier)}"></label>` : `<p class="muted small">Fichier : ${esc(fichier)}</p>`}
+        ${proposal && proposal.photos.length ? `<fieldset class="roles"><legend>Que faire des photos ?</legend>
+          ${proposal.photos.map(p => `<div class="role">
+            <img src="/admin/fichiers/${enc(proposal.id)}/${enc(p)}" alt="">
+            <select name="role:${esc(p)}">
+              <option value="original">Fiche d'origine</option>
+              <option value="plat">Photo du plat</option>
+              <option value="ignorer">Ignorer</option>
+            </select></div>`).join('')}
+        </fieldset>` : ''}
+        <label>Recette (Cooklang)<textarea name="source" rows="22" spellcheck="false" class="code">${esc(source)}</textarea></label>
+        ${COOK_HELP}
+        ${!proposal ? `<label>Photo du plat ${photo ? `<small>(remplace l'actuelle)</small>` : '<small>(facultatif)</small>'}<input type="file" name="photo_plat" accept="image/*"></label>
+          ${photo ? `<img class="thumb" src="/photos/${enc(photo)}" alt="">` : ''}` : ''}
+        <div class="editor-actions">
+          <button type="button" class="button secondary" id="preview-btn">Aperçu</button>
+          <button class="button">${proposal ? 'Publier la recette' : 'Enregistrer'}</button>
+        </div>
+      </form>
+      ${proposal ? `<form method="post" action="/admin/propositions/${enc(proposal.id)}/archiver" onsubmit="return confirm('Archiver cette proposition sans la publier ? (elle reste conservée sur le serveur)')">
+        <button class="link-button">Archiver sans publier</button></form>` : ''}
+      ${current ? `<details class="current"><summary>Version actuelle du fichier</summary><pre class="code">${esc(current)}</pre></details>` : ''}
     </div>
-  </form>
-  ${proposal ? `<form method="post" action="/admin/propositions/${enc(proposal.id)}/archiver" onsubmit="return confirm('Archiver cette proposition sans la publier ? (elle reste conservée sur le serveur)')">
-    <button class="link-button">Archiver sans publier</button></form>` : ''}
-  ${current ? `<details class="current"><summary>Version actuelle du fichier</summary><pre class="code">${esc(current)}</pre></details>` : ''}
-  <div id="apercu" class="apercu" hidden></div>
+    <div class="pane-preview">
+      <p class="pane-title">Aperçu <span class="muted small" id="apercu-etat"></span></p>
+      <div id="apercu" class="apercu">${preview}</div>
+    </div>
+  </div>
 </section>
 <script src="/static/admin.js?v=${ASSET_V}" defer></script>`;
-  return layout({ title, theme, body, bodyClass: 'page-admin' });
+  return layout({ title, theme, body, bodyClass: 'page-admin page-editor' });
 }
 
 function proposalBlock(p) {
@@ -134,7 +150,6 @@ function proposalBlock(p) {
     <p class="muted small">Proposée par <b>${esc(p.prenom)}</b> le ${esc(p.date)}</p>
     <pre>${esc(p.texte || '(pas de texte)')}</pre>
     ${p.anecdote ? `<blockquote class="note">${esc(p.anecdote)}</blockquote>` : ''}
-    ${p.photos.length ? `<p class="thumbs">${p.photos.map(f => `<a href="/admin/fichiers/${enc(p.id)}/${enc(f)}" target="_blank"><img src="/admin/fichiers/${enc(p.id)}/${enc(f)}" alt=""></a>`).join('')}</p>` : ''}
   </div>`;
 }
 

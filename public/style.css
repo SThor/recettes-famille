@@ -188,3 +188,29 @@ form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-
 .button.button.secondary { background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); }
 .link-button { border: 0; background: none; color: var(--muted); text-decoration: underline; font: inherit; cursor: pointer; padding: 8px 0; }
 .apercu { margin-top: 24px; border-top: 3px dashed var(--border); padding-top: 8px; }
+
+/* Éditeur : original / formulaire / aperçu */
+.page-editor main { max-width: 1800px; }
+.editor-layout { display: grid; gap: 20px 28px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.pane-title { font-weight: 700; margin: 0 0 6px; }
+.pane-original details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.pane-original summary { cursor: pointer; font-weight: 700; }
+.pane-original img { width: 100%; margin-top: 10px; border-radius: 6px; border: 1px solid var(--border); cursor: zoom-in; }
+.pane-original .proposal pre { margin: 8px 0; }
+.pane-preview .apercu { margin: 0; border-top: 3px dashed var(--border); padding-top: 4px; }
+
+@media (min-width: 760px) {
+  .editor-layout.has-original { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .editor-layout.has-original .pane-preview { grid-column: 1 / -1; }
+  .pane-original { position: sticky; top: 70px; max-height: calc(100vh - 80px); overflow: auto; }
+}
+@media (min-width: 1200px) {
+  .editor-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .editor-layout.has-original { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); }
+  .editor-layout.has-original .pane-preview { grid-column: auto; }
+  .pane-preview { position: sticky; top: 70px; max-height: calc(100vh - 80px); overflow: auto; }
+  .pane-preview .hero { width: 100%; margin: 8px 0 0; }
+  .editor textarea.code { min-height: calc(100vh - 360px); }
+  /* L'aperçu est toujours visible et se met à jour tout seul : bouton inutile. */
+  #preview-btn { display: none; }
+}
