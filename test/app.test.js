@@ -108,6 +108,58 @@ test.describe('Site public (connecté)', () => {
     });
   });
 
+  test.describe('Recherche par étiquette', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const tagData = html => JSON.parse((html.match(/<script type="application\/json" id="tags-data">([\s\S]*?)<\/script>/) || [])[1] || 'null');
+    const addTagged = (file, tags) => fs.writeFileSync(path.join(t.recipesDir, file), `---\ntitle: ${file.replace('.cook', '')}\ntags: ${tags}\n---\n\nMélanger.\n`);
+
+    test('toutes les étiquettes, comptées et triées par fréquence puis par nom', async () => {
+      addTagged('Clafoutis.cook', '[Four, dessert]');
+      assert.deepEqual(tagData(await get('/')), [
+        { name: 'four', count: 2 },
+        { name: 'auvergne', count: 1 },
+        { name: 'dessert', count: 1 },
+        { name: 'galette des rois', count: 1 },
+      ]);
+    });
+
+    test('bloc « Étiquettes » repliable, fermé par défaut', async () => {
+      const html = await get('/');
+      const block = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
+      assert.match(block, /^<details class="tag-cloud">/);
+      assert.match(block, /<summary>Étiquettes <span class="count">3<\/span><\/summary>/);
+      assert.match(block, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois <span class="count">1<\/span><\/a>/);
+    });
+
+    test('le bloc liste toutes les étiquettes même quand un filtre est actif', async () => {
+      const html = await get('/?tag=auvergne');
+      assert.equal(tagData(html).length, 3);
+      assert.match(html, /<details class="tag-cloud">[\s\S]*galette des rois/);
+    });
+
+    test('barre de recherche prête pour les suggestions (combobox)', async () => {
+      const html = await get('/');
+      assert.match(html, /<input type="search" id="search"[^>]*role="combobox"[^>]*aria-controls="tag-suggestions"[^>]*aria-expanded="false"/);
+      assert.match(html, /<ul id="tag-suggestions" role="listbox" aria-label="Étiquettes suggérées" hidden><\/ul>/);
+    });
+
+    test('les données d\'étiquettes ne peuvent pas casser la page', async () => {
+      addTagged('Piège.cook', '["</script><b>gras"]');
+      const html = await get('/');
+      assert.doesNotMatch(html, /<\/script><b>gras/);
+      assert.ok(tagData(html).some(x => x.name === '</script><b>gras'));
+    });
+
+    test('pas d\'étiquettes : pas de bloc', async () => {
+      for (const f of ['Pounty.cook', 'Galette sèche.cook']) {
+        fs.writeFileSync(path.join(t.recipesDir, f), t.read(f).replace(/^tags:.*$/m, 'tags: []'));
+      }
+      const html = await get('/');
+      assert.doesNotMatch(html, /class="tag-cloud"/);
+      assert.deepEqual(tagData(html), []);
+    });
+  });
+
   test.describe('Liens entre recettes', () => {
     const write = (file, meta, body = 'Mélanger.') => fs.writeFileSync(path.join(t.recipesDir, file), `---\n${meta}\n---\n\n${body}\n`);
     const page = async slug => (await t.req(`/recette/${slug}`, { headers: { cookie } })).text();

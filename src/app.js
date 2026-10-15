@@ -87,7 +87,7 @@ function createApp({
     const norm = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
     const tag = typeof req.query.tag === 'string' ? req.query.tag.trim() : '';
     const groups = tag ? store.grouped(r => r.tags.some(x => norm(x) === norm(tag))) : store.grouped();
-    res.send(views.home({ groups, theme: req.theme, tag }));
+    res.send(views.home({ groups, theme: req.theme, tag, tags: store.tags() }));
   });
 
   app.get('/recette/:slug', (req, res) => {

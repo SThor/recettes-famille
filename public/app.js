@@ -240,3 +240,61 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
   link.setAttribute('aria-current', 'true');
   document.cookie = `theme=${theme}; path=/; max-age=31536000; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`;
 }));
+
+// Suggestions d'étiquettes sous la barre de recherche : clic, Entrée (sur une suggestion choisie
+// avec les flèches) ou Tab → filtre par étiquette ; sinon la recherche par mot continue normalement.
+(() => {
+  const input = document.getElementById('search');
+  const list = document.getElementById('tag-suggestions');
+  const data = document.getElementById('tags-data');
+  if (!input || !list || !data) return;
+  let tags = [];
+  try { tags = JSON.parse(data.textContent); } catch {}
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  let matches = [];
+  let active = -1;
+
+  const go = tag => { location.href = `/?tag=${encodeURIComponent(tag.name)}`; };
+  const close = () => {
+    list.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    active = -1;
+  };
+  const highlight = i => {
+    active = i;
+    [...list.children].forEach((li, n) => li.setAttribute('aria-selected', String(n === i)));
+    if (i >= 0) input.setAttribute('aria-activedescendant', list.children[i].id);
+    else input.removeAttribute('aria-activedescendant');
+  };
+
+  input.addEventListener('input', () => {
+    const q = norm(input.value);
+    // Début de l'étiquette ou d'un de ses mots d'abord, puis le reste ; 6 au plus.
+    const starts = t => norm(t.name).split(' ').some(w => w.startsWith(q)) || norm(t.name).startsWith(q);
+    matches = q ? tags.filter(t => norm(t.name).includes(q)).sort((a, b) => starts(b) - starts(a)).slice(0, 6) : [];
+    if (!matches.length) return close();
+    list.replaceChildren(...matches.map((t, i) => {
+      const li = document.createElement('li');
+      li.id = `tag-sugg-${i}`;
+      li.setAttribute('role', 'option');
+      li.innerHTML = '<span aria-hidden="true">🏷</span> ';
+      li.append(t.name, Object.assign(document.createElement('span'), { className: 'count', textContent: ` ${t.count}` }));
+      li.addEventListener('mousedown', e => { e.preventDefault(); go(t); });
+      return li;
+    }));
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    highlight(-1);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (list.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); highlight((active + 1) % matches.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active <= 0 ? matches.length - 1 : active - 1); }
+    else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); go(matches[active]); }
+    else if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); go(matches[Math.max(active, 0)]); }
+    else if (e.key === 'Escape') close();
+  });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+})();

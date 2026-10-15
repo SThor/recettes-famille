@@ -304,3 +304,16 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
 .tags .tag:hover { text-decoration: underline; }
 .tag-filter { margin: 12px 0 0; padding: 8px 12px; border-radius: var(--radius); background: var(--accent-soft); }
 .tag-filter a { margin-left: 6px; text-decoration: none; font-weight: 700; }
+
+/* Recherche : suggestions d'étiquettes et bloc « Étiquettes » */
+.search-box { position: relative; }
+#tag-suggestions {
+  position: absolute; left: 0; right: 0; top: calc(100% - 6px); z-index: 15; list-style: none; margin: 0; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px -10px rgb(0 0 0 / .3);
+}
+#tag-suggestions li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+#tag-suggestions li[aria-selected="true"], #tag-suggestions li:hover { background: var(--accent-soft); }
+#tag-suggestions .count, .tag-cloud .count { color: var(--muted); font-size: .85em; }
+.tag-cloud { margin: 12px 0 0; }
+.tag-cloud summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .95rem; }
+.tag-cloud .tags { margin: 8px 0 0; }

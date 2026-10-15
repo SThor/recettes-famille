@@ -120,6 +120,25 @@ function createStore(dir) {
     all: load,
     get: slug => load().find(r => r.slug === slug),
     invalidate() { cache = null; },
+    // Toutes les étiquettes : [{ name, count }], par fréquence puis par nom. Les variantes de casse
+    // (« Four » / « four ») sont regroupées ; on affiche la graphie la plus courante (en minuscules à égalité).
+    tags() {
+      const groups = new Map();
+      for (const r of load()) {
+        for (const tag of new Set(r.tags.map(String))) {
+          const key = tag.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+          if (!key) continue;
+          const g = groups.get(key) || { count: 0, spellings: new Map() };
+          g.count++;
+          g.spellings.set(tag.trim(), (g.spellings.get(tag.trim()) || 0) + 1);
+          groups.set(key, g);
+        }
+      }
+      return [...groups.values()].map(g => {
+        const [name] = [...g.spellings].sort((a, b) => b[1] - a[1] || (a[0] === a[0].toLowerCase() ? -1 : 1))[0];
+        return { name, count: g.count };
+      }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+    },
     grouped(keep = () => true) {
       const recipes = load().filter(keep);
       const known = COURSES.map(([key, label]) => ({ key, label, recipes: recipes.filter(r => r.course === key) }));

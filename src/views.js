@@ -65,7 +65,14 @@ function card(r) {
 </li>`;
 }
 
-function home({ groups, theme, tag = '' }) {
+// JSON sûr dans un <script> (pas de « </script> » ni de « <!-- » possibles).
+const jsonForScript = data => JSON.stringify(data).replace(/</g, '\\u003c');
+
+function home({ groups, theme, tag = '', tags = [] }) {
+  const tagCloud = tags.length ? `<details class="tag-cloud">
+    <summary>Étiquettes <span class="count">${tags.length}</span></summary>
+    <p class="tags">${tags.map(x => `<a class="tag" href="/?tag=${encodeURIComponent(x.name)}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</p>
+  </details>` : '';
   const count = groups.reduce((n, g) => n + g.recipes.length, 0);
   const tagBanner = tag ? `<p class="tag-filter">Étiquette : <b>${esc(tag)}</b> · ${count} recette${count > 1 ? 's' : ''} <a href="/" aria-label="Voir toutes les recettes">✕</a></p>
   ${count ? '' : '<p class="empty">Aucune recette avec cette étiquette.</p>'}` : '';
@@ -73,11 +80,16 @@ function home({ groups, theme, tag = '' }) {
 <section class="intro">
   <h1>Le livre de recettes de la famille Givel</h1>
   <p>Les recettes de Maman, de Grand-Maman et de la Givellerie étendue.</p>
-  <input type="search" id="search" placeholder="Chercher une recette, un ingrédient…" aria-label="Chercher" autocomplete="off">
+  <div class="search-box">
+    <input type="search" id="search" placeholder="Chercher une recette, un ingrédient, une étiquette…" aria-label="Chercher" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tag-suggestions" aria-expanded="false">
+    <ul id="tag-suggestions" role="listbox" aria-label="Étiquettes suggérées" hidden></ul>
+  </div>
+  <script type="application/json" id="tags-data">${jsonForScript(tags)}</script>
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
   </nav>
   ${tagBanner}
+  ${tagCloud}
 </section>
 ${groups.map(g => `
 <section class="course" id="${g.key}">
