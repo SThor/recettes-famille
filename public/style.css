@@ -426,3 +426,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 /* Icônes des titres du panneau et de la rangée d'étiquettes d'une recette */
 .filters-panel .icon, .tags > .icon { color: var(--accent); }
 .tags > .icon { align-self: center; margin-right: 2px; }
+
+/* Ligne d'outils de l'accueil : bouton du panneau à gauche, puis le nombre de recettes */
+.results-head { justify-content: flex-start; margin: 4px 0 10px; }

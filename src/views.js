@@ -103,8 +103,9 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
   ${active.length && !count ? `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
-  // Un seul bouton pour replier / déplier le panneau, fixe en tête des résultats : il reste sous le curseur.
-  const resultsHead = `<div class="results-head"><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres">${SIDEBAR_ICON} Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button></div>`;
+  // Ligne d'outils au-dessus des deux colonnes : bouton pour replier / déplier le panneau (à gauche,
+  // il ne bouge pas quand le panneau se replie) et nombre de recettes.
+  const resultsHead = `<div class="results-head"><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres">${SIDEBAR_ICON} Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p></div>`;
 
   const dietRow = diets.length ? `<p class="diets">${icon('leaf', 16)} Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud">
@@ -128,6 +129,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   <p>Les recettes de Maman, de Grand-Maman et de la Givellerie étendue.</p>
 </section>
 <button type="button" class="filters-toggle" aria-controls="filtres" aria-expanded="false">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button>
+${resultsHead}
 <div class="home-layout">
 <aside class="filters-panel" id="filtres" aria-label="Filtres">
   <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}</div>
@@ -145,7 +147,6 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
   </nav>
-  ${resultsHead}
   ${pills}
   ${notes}
   ${groups.map(g => `

@@ -244,10 +244,11 @@ test.describe('Site public (connecté)', () => {
       assert.ok(pos('<div class="home-results">') < pos('<nav class="chips">'), 'catégories dans la colonne des résultats');
     });
 
-    test('un seul bouton pour replier / déplier, fixe en tête des résultats (grand écran)', async () => {
+    test('un seul bouton pour replier / déplier, à gauche au-dessus des deux colonnes (grand écran)', async () => {
       const html = await get('/?tag=auvergne');
-      assert.match(html, /<div class="results-head"><p class="results-count"><b>1<\/b> recette<\/p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"[\s\S]*?<\/svg> Filtres <span class="count">1<\/span><\/button><\/div>/);
-      assert.equal((html.match(/class="sidebar-toggle/g) || []).length, 1, 'plus de bouton dans le panneau');
+      assert.match(html, /<div class="results-head"><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true" title="Masquer les filtres"><svg class="icon icon-sidebar"[^>]*aria-hidden="true"[\s\S]*?<\/svg> Filtres <span class="count">1<\/span><\/button><p class="results-count"><b>1<\/b> recette<\/p><\/div>/);
+      assert.ok(html.indexOf('<div class="results-head">') < html.indexOf('<div class="home-layout">'), 'au-dessus des colonnes : ne bouge pas quand le panneau se replie');
+      assert.equal((html.match(/class="sidebar-toggle/g) || []).length, 1, 'un seul bouton');
     });
 
     test('bouton « Filtres » pour mobile, avec le nombre de filtres actifs', async () => {
