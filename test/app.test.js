@@ -111,6 +111,41 @@ test.describe('Admin', () => {
     assert.equal((await t.admin('/admin')).status, 200);
   });
 
+  test.describe('Onglets du suivi', () => {
+    const PANELS = ['propositions', 'recettes', 'a-demander', 'historique'];
+    const dashboard = async () => (await t.admin('/admin')).text();
+    const between = (html, start, end) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)));
+
+    test('barre d\'onglets épinglable, un onglet par volet', async () => {
+      const html = await dashboard();
+      const nav = between(html, '<nav class="admin-tabs"', '</nav>');
+      assert.match(nav, /role="tablist"/);
+      for (const id of PANELS) {
+        assert.match(nav, new RegExp(`<a[^>]+href="#${id}"[^>]+aria-controls="${id}"`), `onglet ${id}`);
+        assert.match(html, new RegExp(`<section[^>]+id="${id}"[^>]+role="tabpanel"`), `volet ${id}`);
+      }
+    });
+
+    test('« Nouvelle recette » est dans le volet Recettes, plus dans l\'en-tête', async () => {
+      const html = await dashboard();
+      assert.doesNotMatch(between(html, '<div class="admin-head"', '</div>'), /recettes\/nouvelle/);
+      assert.match(between(html, 'id="recettes"', '</section>'), /href="\/admin\/recettes\/nouvelle"/);
+    });
+
+    test('onglet par défaut : Recettes sans proposition, Propositions s\'il y en a', async () => {
+      assert.match(await dashboard(), /data-default-tab="recettes"/);
+      const dir = path.join(t.submissionsDir, '2026-10-15T13-00-00-000Z-bbb222');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'recette.json'), JSON.stringify({ prenom: 'A', titre: 'B', texte: 'C', photos: [], date: 'd' }));
+      assert.match(await dashboard(), /data-default-tab="propositions"/);
+    });
+
+    test('après une action, on revient sur le bon onglet', async () => {
+      const res = await t.admin('/admin/a-demander/coche', { method: 'POST', body: t.form({ id: '1.2', titre: 'Polenta', fait: 'on' }) });
+      assert.match(res.headers.get('location'), /#a-demander$/);
+    });
+  });
+
   test('tableau de suivi : compteurs calculés depuis les fichiers', async () => {
     const html = await (await t.admin('/admin')).text();
     assert.match(html, /<b>2 recettes<\/b> · vérifiées : 0\/2 · portions : 1\/2 · photos du plat : 0\/2 · auteur : 1\/2/);

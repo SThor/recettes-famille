@@ -45,3 +45,26 @@ if (editorForm && source) {
     if (!submitting && source.value !== initial) e.preventDefault();
   });
 }
+
+// Suivi : onglets (le volet affiché suit l'#ancre de l'URL ; sans JS, tout reste affiché).
+const dash = document.querySelector('.dashboard');
+if (dash) {
+  const tabs = [...dash.querySelectorAll('[role=tab]')];
+  const panels = [...dash.querySelectorAll('[role=tabpanel]')];
+  const show = id => {
+    if (!panels.some(p => p.id === id)) id = dash.dataset.defaultTab;
+    panels.forEach(p => { p.hidden = p.id !== id; });
+    tabs.forEach(t => t.setAttribute('aria-selected', String(t.getAttribute('aria-controls') === id)));
+  };
+  tabs.forEach(t => t.addEventListener('click', e => {
+    e.preventDefault();
+    const id = t.getAttribute('aria-controls');
+    history.replaceState(null, '', `${location.pathname}${location.search}#${id}`);
+    show(id);
+    window.scrollTo({ top: 0 });
+  }));
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1));
+  // Le navigateur a pu défiler jusqu'à l'ancre : on revient en haut.
+  requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+}

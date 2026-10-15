@@ -13,26 +13,34 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
     ['auteur', count(r => r.meta.author)],
   ];
   const todoItems = todo ? todo.sections.flatMap(s => s.entries.filter(e => e.type === 'item')) : [];
+  const tabs = [
+    ['propositions', 'Propositions', proposals.length],
+    ['recettes', 'Recettes', n],
+    ['a-demander', 'À demander', todoItems.filter(i => !i.done).length],
+    ['historique', 'Historique', null],
+  ];
+  // Volet ouvert par défaut (sans #ancre) : les propositions s'il y en a à traiter.
+  const defaultTab = proposals.length ? 'propositions' : 'recettes';
+  const panel = (id, inner) => `<section class="tab-panel" id="${id}" role="tabpanel" aria-labelledby="tab-${id}">${inner}</section>`;
 
   const body = `
-<section class="admin">
-  <h1>Suivi du livre</h1>
-  <p class="muted">Connecté en tant que <b>${esc(user)}</b> · <a href="/admin/recettes/nouvelle">+ Nouvelle recette</a></p>
-  ${flash ? `<p class="flash">${esc(flash)}</p>` : ''}
-  <nav class="chips">
-    <a class="chip" href="#propositions">Propositions (${proposals.length})</a>
-    <a class="chip" href="#recettes">Recettes (${n})</a>
-    <a class="chip" href="#a-demander">À demander (${todoItems.filter(i => !i.done).length})</a>
-    <a class="chip" href="#historique">Historique</a>
+<div class="admin dashboard" data-default-tab="${defaultTab}">
+  <div class="admin-head">
+    <h1>Suivi du livre</h1>
+    <p class="muted small">Connecté en tant que <b>${esc(user)}</b></p>
+  </div>
+  <nav class="admin-tabs" role="tablist" aria-label="Volets du suivi">
+    ${tabs.map(([id, label, count]) => `<a role="tab" id="tab-${id}" href="#${id}" aria-controls="${id}">${label}${count === null ? '' : ` <span class="count">${count}</span>`}</a>`).join('')}
   </nav>
+  ${flash ? `<p class="flash">${esc(flash)}</p>` : ''}
 
-  <h2 id="propositions">Propositions à traiter</h2>
+  ${panel('propositions', `<h2>Propositions à traiter</h2>
   ${proposals.length ? `<ul class="admin-list">${proposals.map(p => `<li>
     <a href="/admin/propositions/${enc(p.id)}"><b>${esc(p.titre)}</b></a>
     <span class="muted">par ${esc(p.prenom)}, ${esc(p.date)}${p.photos.length ? ` · ${p.photos.length} photo${p.photos.length > 1 ? 's' : ''}` : ''}</span>
-  </li>`).join('')}</ul>` : '<p class="muted">Rien en attente.</p>'}
+  </li>`).join('')}</ul>` : '<p class="muted">Rien en attente.</p>'}`)}
 
-  <h2 id="recettes">Recettes</h2>
+  ${panel('recettes', `<div class="panel-head"><h2>Recettes</h2><a class="button button-small" href="/admin/recettes/nouvelle">+ Nouvelle recette</a></div>
   <p class="stats"><b>${n} recettes</b> · ${stats.map(([k, v]) => `${k} : ${v}/${n}`).join(' · ')}</p>
   <ul class="admin-list recipes-status">
   ${recipes.map(r => `<li>
@@ -53,9 +61,9 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
       <noscript><button>OK</button></noscript>
     </form>
   </li>`).join('')}
-  </ul>
+  </ul>`)}
 
-  <h2 id="a-demander">À demander</h2>
+  ${panel('a-demander', `<h2>À demander</h2>
   ${todo ? todo.sections.map(s => `
     <h3>${esc(s.title)}</h3>
     <ul class="admin-list todo">
@@ -77,12 +85,13 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
     <label>Recette<input name="titre" required maxlength="200"></label>
     <label>Commentaire <small>(facultatif)</small><input name="note" maxlength="300"></label>
     <button class="button">Ajouter à la liste</button>
-  </form>` : ''}
+  </form>` : ''}`)}
 
-  <h2 id="historique">Historique</h2>
-  ${history ? `<ul class="history">${history.map(h => `<li><span class="muted small">${esc(h.date)} · ${esc(h.author)}</span><br>${esc(h.subject)}</li>`).join('')}</ul>` : '<p class="muted">Pas de dépôt git.</p>'}
-</section>`;
-  return layout({ title: 'Suivi', theme, body, bodyClass: 'page-admin' });
+  ${panel('historique', `<h2>Historique</h2>
+  ${history ? `<ul class="history">${history.map(h => `<li><span class="muted small">${esc(h.date)} · ${esc(h.author)}</span><br>${esc(h.subject)}</li>`).join('')}</ul>` : '<p class="muted">Pas de dépôt git.</p>'}`)}
+</div>
+<script src="/static/admin.js?v=${ASSET_V}" defer></script>`;
+  return layout({ title: 'Suivi', theme, body, bodyClass: 'page-admin page-dashboard' });
 }
 
 const COOK_HELP = `<details class="help"><summary>Aide Cooklang</summary>
