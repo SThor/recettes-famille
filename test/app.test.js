@@ -87,7 +87,8 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes portant l\'étiquette', async () => {
       const html = await get('/?tag=auvergne');
       assert.deepEqual(cardsOf(html), ['pounty']);
-      assert.match(html, /<p class="tag-filter"><span class="active-filter">Étiquette : <b>auvergne<\/b> <a href="\/" aria-label="Retirer ce filtre">✕<\/a><\/span> · 1 recette<\/p>/);
+      assert.match(html, /<li class="filter-pill"><span class="pill-label"><span aria-hidden="true">🏷<\/span> Étiquette : <b>auvergne<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
+      assert.match(html, /<p class="results-count"><b>1<\/b> recette<\/p>/);
     });
 
     test('insensible à la casse et aux espaces', async () => {
@@ -97,14 +98,15 @@ test.describe('Site public (connecté)', () => {
     test('étiquette inconnue : aucune recette et un lien pour revenir', async () => {
       const html = await get('/?tag=introuvable');
       assert.deepEqual(cardsOf(html), []);
-      assert.match(html, /Étiquette : <b>introuvable<\/b> <a href="\/" aria-label="Retirer ce filtre">✕<\/a><\/span> · 0 recette/);
+      assert.match(html, /Étiquette : <b>introuvable<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a>/);
+      assert.match(html, /<p class="results-count"><b>0<\/b> recette<\/p>/);
       assert.match(html, /Aucune recette avec cette étiquette\./);
     });
 
     test('sans filtre : toutes les recettes, pas de bandeau', async () => {
       const html = await get('/');
       assert.deepEqual(cardsOf(html), ['galette-seche', 'pounty']);
-      assert.doesNotMatch(html, /class="tag-filter"/);
+      assert.doesNotMatch(html, /class="active-filters"/);
     });
   });
 
@@ -131,14 +133,15 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes du régime, sans tenir compte des majuscules', async () => {
       const html = await get('/?regime=V%C3%A9g%C3%A9tarien');
       assert.deepEqual(cardsOf(html), ['galette-seche', 'salade']);
-      assert.match(html, /<p class="tag-filter"><span class="active-filter">Régime : <b>Végétarien<\/b> <a href="\/" aria-label="Retirer ce filtre">✕<\/a><\/span> · 2 recettes<\/p>/);
+      assert.match(html, /<li class="filter-pill"><span class="pill-label"><span aria-hidden="true">🥗<\/span> Régime : <b>Végétarien<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
+      assert.match(html, /<p class="results-count"><b>2<\/b> recettes<\/p>/);
     });
 
     test('régime et étiquette se combinent', async () => {
       const html = await get('/?regime=v%C3%A9g%C3%A9tarien&tag=pique-nique');
       assert.deepEqual(cardsOf(html), ['salade']);
-      assert.match(html, /Régime : <b>végétarien<\/b> <a href="\/\?tag=pique-nique" aria-label="Retirer ce filtre">✕<\/a>/);
-      assert.match(html, /Étiquette : <b>pique-nique<\/b> <a href="\/\?regime=v%C3%A9g%C3%A9tarien" aria-label="Retirer ce filtre">✕<\/a>/);
+      assert.match(html, /Régime : <b>végétarien<\/b><\/span><a class="pill-remove" href="\/\?tag=pique-nique" aria-label="Retirer ce filtre">×<\/a>/);
+      assert.match(html, /Étiquette : <b>pique-nique<\/b><\/span><a class="pill-remove" href="\/\?regime=v%C3%A9g%C3%A9tarien" aria-label="Retirer ce filtre">×<\/a>/);
       assert.match(html, /<a class="clear-filters" href="\/">Tout effacer<\/a>/);
     });
 
@@ -219,6 +222,20 @@ test.describe('Site public (connecté)', () => {
     test('les raccourcis de durée gardent les autres filtres', async () => {
       const panel = panelOf(await get('/?tag=auvergne&temps=prep'));
       assert.match(panel, /href="\/\?tag=auvergne&amp;temps=prep&amp;duree=30"/);
+    });
+
+    test('recherche et catégories dans la colonne des résultats, pas au-dessus des filtres', async () => {
+      const html = await get('/');
+      const pos = s => html.indexOf(s);
+      assert.ok(pos('<h1>') < pos('<div class="home-layout">'), 'titre au-dessus des deux colonnes');
+      assert.ok(pos('<aside class="filters-panel"') < pos('<div class="home-results">'));
+      assert.ok(pos('<div class="home-results">') < pos('id="search"'), 'recherche dans la colonne des résultats');
+      assert.ok(pos('<div class="home-results">') < pos('<nav class="chips">'), 'catégories dans la colonne des résultats');
+    });
+
+    test('compteur de recettes et bouton pour replier le panneau (grand écran)', async () => {
+      const html = await get('/');
+      assert.match(html, /<div class="results-head"><p class="results-count"><b>2<\/b> recettes<\/p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true">/);
     });
 
     test('bouton « Filtres » pour mobile, avec le nombre de filtres actifs', async () => {

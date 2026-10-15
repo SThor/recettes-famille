@@ -37,6 +37,8 @@
     const none = document.getElementById('no-result');
     if (none) none.hidden = shown > 0 || !q;
     if (countEl) countEl.textContent = `${shown} recette${shown > 1 ? 's' : ''}`;
+    const head = document.querySelector('.results-count');
+    if (head) head.innerHTML = `<b>${shown}</b> recette${shown > 1 ? 's' : ''}`;
   }
 
   search?.addEventListener('input', apply);
@@ -358,4 +360,20 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
     else if (e.key === 'Escape') close();
   });
   input.addEventListener('blur', () => setTimeout(close, 150));
+})();
+
+// Grand écran : replier / déplier le panneau de filtres (mémorisé sur l'appareil).
+(() => {
+  const btn = document.querySelector('.sidebar-toggle');
+  if (!btn) return;
+  const KEY = 'filtres-replies';
+  const set = collapsed => {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch {}
+  };
+  let saved = false;
+  try { saved = localStorage.getItem(KEY) === '1'; } catch {}
+  if (saved) set(true);
+  btn.addEventListener('click', () => set(!document.body.classList.contains('sidebar-collapsed')));
 })();

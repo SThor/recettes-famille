@@ -372,3 +372,38 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
   .filters-panel { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow: auto; }
   .home-results .course:first-of-type h2, .home-results > .tag-filter:first-child { margin-top: 12px; }
 }
+
+/* Accueil v2 : en-tête des résultats, filtres actifs en pastilles, panneau repliable */
+.home-results .search-box { margin-top: 4px; }
+.results-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 6px; }
+.results-count { margin: 0; color: var(--muted); font-size: .95rem; }
+.results-count b { color: var(--text); font-size: 1.05rem; }
+.sidebar-toggle { display: none; }
+.active-filters { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 14px; padding: 0; }
+.filter-pill {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0;
+  padding: 3px 3px 3px 12px; border-radius: 999px; font-size: .9rem;
+  background: var(--accent-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.pill-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill-remove {
+  flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  text-decoration: none; font-weight: 700; line-height: 1; color: var(--accent); background: var(--surface);
+  transition: background .15s, color .15s;
+}
+.pill-remove:hover, .pill-remove:focus-visible { background: var(--accent); color: var(--surface); }
+.active-filters .clear-filters { font-size: .9rem; margin-left: 4px; }
+
+@media (min-width: 1000px) {
+  .sidebar-toggle {
+    display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer;
+    padding: 6px 14px; border-radius: 999px; color: var(--accent); background: var(--surface); border: 1px solid var(--border);
+  }
+  .sidebar-toggle::before { content: "☰"; font-size: .95em; }
+  .sidebar-toggle .when-closed, .sidebar-collapsed .sidebar-toggle .when-open { display: none; }
+  .sidebar-collapsed .sidebar-toggle .when-closed { display: inline; }
+  .sidebar-toggle .count { background: var(--accent); color: var(--surface); border-radius: 999px; padding: 0 7px; font-size: .8rem; }
+  .sidebar-collapsed .home-layout { grid-template-columns: minmax(0, 1fr); }
+  .sidebar-collapsed .filters-panel { display: none; }
+  .filters-panel { top: 76px; }
+}

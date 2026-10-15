@@ -88,16 +88,19 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
 
-  // Filtres actifs : une ✕ par filtre (retire ce filtre seulement), « Tout effacer » s'il y en a plusieurs.
+  // Filtres actifs en pastilles : une croix par filtre (retire ce filtre seulement),
+  // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
   const active = [
-    regime && [`Régime : <b>${esc(regime)}</b>`, { regime: null }],
-    tag && [`Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
-    duree && [`Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
+    regime && ['🥗', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
+    tag && ['🏷', `Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
+    duree && ['⏱', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
-  const banner = active.length ? `<p class="tag-filter">${active.map(([label, remove]) =>
-    `<span class="active-filter">${label} <a href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">✕</a></span>`).join(' · ')} · ${recettes(count)}${active.length > 1 ? ' <a class="clear-filters" href="/">Tout effacer</a>' : ''}</p>
-  ${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
-  ${count ? '' : `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>`}` : '';
+  const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([icon, label, remove]) =>
+    `<li class="filter-pill"><span class="pill-label"><span aria-hidden="true">${icon}</span> ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
+  const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
+  ${active.length && !count ? `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
+  // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
+  const resultsHead = `<div class="results-head"><p class="results-count"><b>${count}</b> recette${count > 1 ? 's' : ''}</p><button type="button" class="sidebar-toggle" aria-controls="filtres" aria-expanded="true"><span class="when-open">Masquer les filtres</span><span class="when-closed">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</span></button></div>`;
 
   const dietRow = diets.length ? `<p class="diets">Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud">
@@ -119,14 +122,6 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
 <section class="intro">
   <h1>Le livre de recettes de la famille Givel</h1>
   <p>Les recettes de Maman, de Grand-Maman et de la Givellerie étendue.</p>
-  <div class="search-box">
-    <input type="search" id="search" placeholder="Chercher une recette, un ingrédient, une étiquette…" aria-label="Chercher" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tag-suggestions" aria-expanded="false">
-    <ul id="tag-suggestions" role="listbox" aria-label="Étiquettes suggérées" hidden></ul>
-  </div>
-  <script type="application/json" id="tags-data">${jsonForScript(tags)}</script>
-  <nav class="chips">
-    ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
-  </nav>
 </section>
 <button type="button" class="filters-toggle" aria-controls="filtres" aria-expanded="false">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button>
 <div class="home-layout">
@@ -138,7 +133,17 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   <button type="button" class="button filters-apply">Voir <span id="filters-count">${recettes(count)}</span></button>
 </aside>
 <div class="home-results">
-  ${banner}
+  <div class="search-box">
+    <input type="search" id="search" placeholder="Chercher une recette, un ingrédient, une étiquette…" aria-label="Chercher" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tag-suggestions" aria-expanded="false">
+    <ul id="tag-suggestions" role="listbox" aria-label="Étiquettes suggérées" hidden></ul>
+  </div>
+  <script type="application/json" id="tags-data">${jsonForScript(tags)}</script>
+  <nav class="chips">
+    ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
+  </nav>
+  ${resultsHead}
+  ${pills}
+  ${notes}
   ${groups.map(g => `
   <section class="course" id="${g.key}"${g.recipes.some(fits) ? '' : ' hidden'}>
     <h2>${esc(g.label)}</h2>
