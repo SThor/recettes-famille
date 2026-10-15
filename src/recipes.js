@@ -96,6 +96,8 @@ function createStore(dir) {
     imagePath(rel) {
       const full = path.resolve(dir, rel);
       if (!full.startsWith(path.resolve(dir) + path.sep)) return null;
+      // Rien de ce qui est rangé dans Archives/ n'est publié (recettes écartées et leurs images).
+      if (path.relative(dir, full).split(path.sep).some(seg => seg.toLowerCase() === 'archives')) return null;
       if (!PHOTO_EXT.includes(path.extname(full).toLowerCase())) return null;
       return fs.existsSync(full) ? full : null;
     },

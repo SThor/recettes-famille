@@ -74,6 +74,27 @@ test.describe('Site public (connecté)', () => {
     assert.doesNotMatch(html, /class="hero"/);
   });
 
+  test.describe('Recettes archivées (Recettes/Archives/)', () => {
+    test('absentes de l\'accueil et introuvables', async () => {
+      const home = await (await t.req('/', { headers: { cookie } })).text();
+      assert.doesNotMatch(home, /Curry archivé/);
+      assert.equal((await t.req('/recette/curry-archive', { headers: { cookie } })).status, 404);
+    });
+
+    test('absentes du suivi de l\'admin', async () => {
+      const html = await (await t.admin('/admin')).text();
+      assert.doesNotMatch(html, /Curry archivé/);
+      assert.match(html, /<b>2 recettes<\/b>/);
+    });
+
+    test('leurs images ne sont pas servies', async () => {
+      for (const p of ['Archives/fiche.jpg', 'Archives/Curry%20archiv%C3%A9.jpg', 'archives/fiche.jpg', 'Originaux/../Archives/fiche.jpg']) {
+        assert.equal((await t.req(`/photos/${p}`, { headers: { cookie } })).status, 404, p);
+      }
+      assert.equal((await t.req('/photos/Originaux/galette.jpg', { headers: { cookie } })).status, 200);
+    });
+  });
+
   test('recette inconnue → 404', async () => {
     assert.equal((await t.req('/recette/nope', { headers: { cookie } })).status, 404);
   });
