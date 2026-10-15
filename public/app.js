@@ -55,6 +55,18 @@ if (recipe) {
   let wakeLock = null;
   let tick = null;
   const baseTitle = document.title;
+  const RING_FOR = 60_000; // la sonnerie dure au plus 1 min
+  const storeKey = window.TimerState?.storageKey(location.pathname);
+
+  // Mémorise les minuteurs sur l'appareil : ils survivent à un rechargement (changement de page…).
+  function save() {
+    if (!storeKey) return;
+    try {
+      const list = [...timers].map(([btn, t]) => ({ ...t, id: btn.dataset.timer }));
+      if (list.length) localStorage.setItem(storeKey, JSON.stringify(TimerState.serialize(list, Date.now())));
+      else localStorage.removeItem(storeKey);
+    } catch { /* stockage indisponible (navigation privée…) : tant pis */ }
+  }
 
   const clock = s => {
     s = Math.max(0, Math.ceil(s));
@@ -99,14 +111,16 @@ if (recipe) {
     if (document.visibilityState === 'visible' && [...timers.values()].some(t => t.endAt)) keepAwake(true);
   });
 
-  function ring(t) {
+  function ring(t, endedAt = Date.now()) {
     t.done = true;
     t.endAt = null;
     t.remaining = 0;
+    t.endedAt = endedAt;
+    save();
+    if (Date.now() - endedAt >= RING_FOR) return; // terminé depuis longtemps : juste affiché
     const once = () => { beep(); navigator.vibrate?.([300, 150, 300]); };
     once();
-    let count = 0;
-    t.ringing = setInterval(() => { if (++count >= 40) stopRinging(t); else once(); }, 1500); // ~1 min max
+    t.ringing = setInterval(() => { if (Date.now() - endedAt >= RING_FOR) stopRinging(t); else once(); }, 1500);
     document.title = `⏰ ${t.label} — terminé !`;
   }
   function stopRinging(t) {
@@ -126,6 +140,7 @@ if (recipe) {
     if (t.done) return stop(btn); // minuteur terminé : un clic l'arrête
     if (t.endAt) { t.remaining = (t.endAt - Date.now()) / 1000; t.endAt = null; } // pause
     else t.endAt = Date.now() + t.remaining * 1000; // départ ou reprise
+    save();
     update();
   }
   function stop(btn) {
@@ -135,6 +150,7 @@ if (recipe) {
     btn.innerHTML = t.html;
     btn.classList.remove('running', 'paused', 'done');
     timers.delete(btn);
+    save();
     update();
   }
 
@@ -185,4 +201,40 @@ if (recipe) {
   }
 
   buttons.forEach(btn => btn.addEventListener('click', () => toggle(btn)));
+
+  // Reprise des minuteurs mémorisés. Après un rechargement, le navigateur n'autorise le son
+  // qu'après une interaction : le premier toucher sur la page le réactive.
+  document.addEventListener('pointerdown', unlockAudio, { once: true });
+  try {
+    const saved = storeKey ? TimerState.restore(JSON.parse(localStorage.getItem(storeKey)), Date.now()) : [];
+    for (const s of saved) {
+      const btn = buttons.find(b => b.dataset.timer === s.id);
+      if (!btn) continue;
+      const t = { label: s.label, html: btn.innerHTML, total: s.total, remaining: s.remaining, endAt: s.endAt, done: false, ringing: null };
+      timers.set(btn, t);
+      if (s.done) ring(t, s.endedAt);
+    }
+    if (saved.length) update();
+  } catch { /* données illisibles : on repart de zéro */ }
 })();
+
+// Changement de style sans recharger la page (les minuteurs continuent).
+document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.addEventListener('click', e => {
+  e.preventDefault();
+  const { theme, css, fonts } = link.dataset;
+  const setSheet = (id, href) => {
+    let el = document.getElementById(id);
+    if (!href) { el?.remove(); return; }
+    if (!el) {
+      el = Object.assign(document.createElement('link'), { rel: 'stylesheet', id });
+      document.querySelector('link[href*="/static/style.css"]').after(el);
+    }
+    el.href = href;
+  };
+  setSheet('fonts-css', fonts);
+  setSheet('theme-css', css);
+  document.body.className = document.body.className.replace(/\btheme-\S+/, `theme-${theme}`);
+  document.querySelectorAll('.site-footer a[data-theme]').forEach(a => a.toggleAttribute('aria-current', a === link));
+  link.setAttribute('aria-current', 'true');
+  document.cookie = `theme=${theme}; path=/; max-age=31536000; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`;
+}));

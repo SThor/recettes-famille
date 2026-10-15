@@ -32,11 +32,11 @@ test.describe('Rendu des minuteurs', () => {
 
   test('minuteur connu : bouton cliquable avec sa durée en secondes et son nom', () => {
     const out = html('Cuire ~cuisson{45%minutes}.');
-    assert.match(out, /<button type="button" class="timer" data-seconds="2700" data-label="cuisson">⏲&nbsp;cuisson : 45 minutes<\/button>/);
+    assert.match(out, /<button type="button" class="timer" data-timer="0" data-seconds="2700" data-label="cuisson">⏲&nbsp;cuisson : 45 minutes<\/button>/);
   });
 
   test('minuteur sans nom : le libellé est la durée', () => {
-    assert.match(html('Attendre ~{10%min}.'), /<button type="button" class="timer" data-seconds="600" data-label="10 min">/);
+    assert.match(html('Attendre ~{10%min}.'), /<button type="button" class="timer" data-timer="0" data-seconds="600" data-label="10 min">/);
   });
 
   test('durée illisible : simple texte, pas de bouton', () => {

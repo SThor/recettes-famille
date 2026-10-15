@@ -7,6 +7,7 @@ const { createStore, slugify } = require('./recipes');
 const views = require('./views');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
+const { fontsRouter } = require('./fonts');
 
 
 // Construit l'application (sans l'écouter) : utilisé par server.js et par les tests.
@@ -39,6 +40,7 @@ function createApp({
     next();
   });
 
+  app.use('/static/fonts', fontsRouter());
   app.use('/static', express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
 
   // --- Accès famille : mot de passe partagé, ou lien secret /entrer?cle=... ---

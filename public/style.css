@@ -282,3 +282,4 @@ button.timer.done { background: #c0392b; color: #fff; animation: timer-blink 1s 
 .timer-row.done .timer-time { color: #c0392b !important; }
 .timer-stop { color: var(--muted) !important; padding: 4px 8px; }
 body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
+.site-footer a[aria-current="true"] { font-weight: 700; color: var(--text); text-decoration: none; }

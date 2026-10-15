@@ -12,11 +12,14 @@ const THEMES = {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const enc = s => encodeURIComponent(s).replace(/%2F/g, '/');
 
+// Feuilles propres à un style (thème + polices hébergées) ; le style « simple » n'en a pas.
+const themeAssets = theme => (theme === 'simple' ? { css: '', fonts: '' } : {
+  css: `/static/themes/${theme}.css?v=${ASSET_V}`,
+  fonts: `/static/fonts/${theme}.css?v=${ASSET_V}`,
+});
+
 function layout({ title, theme, body, bodyClass = '' }) {
-  const fonts = {
-    pastel: 'family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Nunito:wght@400;600;700',
-    vichy: 'family=Caveat:wght@600&family=Lora:ital,wght@0,400;0,600;1,400',
-  }[theme];
+  const assets = themeAssets(theme);
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -24,9 +27,9 @@ function layout({ title, theme, body, bodyClass = '' }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>${esc(title)} · Recettes de famille</title>
-${fonts ? `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fonts}&display=swap">` : ''}
+${assets.fonts ? `<link rel="stylesheet" id="fonts-css" href="${assets.fonts}">` : ''}
 <link rel="stylesheet" href="/static/style.css?v=${ASSET_V}">
-${theme !== 'simple' ? `<link rel="stylesheet" href="/static/themes/${theme}.css?v=${ASSET_V}">` : ''}
+${assets.css ? `<link rel="stylesheet" id="theme-css" href="${assets.css}">` : ''}
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍲</text></svg>">
 </head>
 <body class="theme-${theme} ${bodyClass}">
@@ -39,9 +42,13 @@ ${body}
 </main>
 <footer class="site-footer">
   <p>Style d'essai :
-    ${Object.entries(THEMES).map(([k, label]) => k === theme ? `<strong>${label}</strong>` : `<a href="/essais/${k}">${label}</a>`).join(' · ')}
+    ${Object.entries(THEMES).map(([k, label]) => {
+      const a = themeAssets(k);
+      return `<a href="/essais/${k}" data-theme="${k}" data-css="${a.css}" data-fonts="${a.fonts}"${k === theme ? ' aria-current="true"' : ''}>${label}</a>`;
+    }).join(' · ')}
   </p>
 </footer>
+<script src="/static/timer-state.js?v=${ASSET_V}" defer></script>
 <script src="/static/app.js?v=${ASSET_V}" defer></script>
 </body>
 </html>`;
@@ -91,7 +98,8 @@ function ingName(i) {
   return `<a class="recipe-ref" href="/recette/${slugify(i.ref.split('/').pop())}">${esc(i.name)}</a>`;
 }
 
-function stepHtml(parts) {
+// ctx.timer : compteur des minuteurs de la recette (data-timer), pour les retrouver après un rechargement.
+function stepHtml(parts, ctx = { timer: 0 }) {
   return parts.map(p => {
     if (p.type === 'text') return esc(p.value);
     if (p.type === 'ingredient') {
@@ -104,7 +112,7 @@ function stepHtml(parts) {
     // Durée lisible : bouton qui lance un compte à rebours (public/app.js), sinon simple texte.
     const seconds = toSeconds(p.quantity, p.unit);
     return seconds
-      ? `<button type="button" class="timer" data-seconds="${seconds}" data-label="${esc(p.name || duration)}">${label}</button>`
+      ? `<button type="button" class="timer" data-timer="${ctx.timer++}" data-seconds="${seconds}" data-label="${esc(p.name || duration)}">${label}</button>`
       : `<span class="timer">${label}</span>`;
   }).join('');
 }
@@ -128,12 +136,13 @@ function recipeArticle(r, { back = true } = {}) {
 
   // Numérotation des étapes : repart à 1 à chaque section ; photos d'étape indexées sur toute la recette.
   let stepNo = 0;
+  const ctx = { timer: 0 };
   let stepIndex = -1;
   const itemHtml = it => {
     if (it.type === 'section') { stepNo = 0; return `<h3 class="step-section">${esc(it.title)}</h3>`; }
     if (it.type === 'note') return `<blockquote class="note">${it.lines.map(esc).join('<br>')}</blockquote>`;
     const photo = r.stepPhotos?.[++stepIndex];
-    return `<div class="step"><span class="step-no">${++stepNo}</span><div><p>${stepHtml(it.parts)}</p>${photo ? `<img class="step-photo" src="/photos/${enc(photo)}" alt="" loading="lazy">` : ''}</div></div>`;
+    return `<div class="step"><span class="step-no">${++stepNo}</span><div><p>${stepHtml(it.parts, ctx)}</p>${photo ? `<img class="step-photo" src="/photos/${enc(photo)}" alt="" loading="lazy">` : ''}</div></div>`;
   };
 
   return `
