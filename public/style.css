@@ -214,3 +214,5 @@ form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-
   /* L'aperçu est toujours visible et se met à jour tout seul : bouton inutile. */
   #preview-btn { display: none; }
 }
+.verify-box { display: flex; gap: 10px; align-items: baseline; font-weight: 600; margin: 4px 0 8px; cursor: pointer; }
+.verify-box input { accent-color: var(--accent); width: 20px; height: 20px; flex: none; transform: translateY(4px); }

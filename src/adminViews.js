@@ -94,7 +94,7 @@ const COOK_HELP = `<details class="help"><summary>Aide Cooklang</summary>
 
 // Éditeur en trois volets : original (fiche d'origine / proposition), formulaire, aperçu.
 // Ordre du DOM = ordre de lecture sur mobile ; les colonnes se forment selon la largeur (CSS).
-function editor({ theme, title, action, source, base, fichier, isNew, proposal, error, current, photo, originals = [], preview = '' }) {
+function editor({ theme, title, action, source, base, fichier, isNew, proposal, error, current, photo, originals = [], preview = '', verified = '' }) {
   const hasOriginal = originals.length > 0 || Boolean(proposal);
   const body = `
 <section class="admin editor">
@@ -126,6 +126,8 @@ function editor({ theme, title, action, source, base, fichier, isNew, proposal, 
         ${COOK_HELP}
         ${!proposal ? `<label>Photo du plat ${photo ? `<small>(remplace l'actuelle)</small>` : '<small>(facultatif)</small>'}<input type="file" name="photo_plat" accept="image/*"></label>
           ${photo ? `<img class="thumb" src="/photos/${enc(photo)}" alt="">` : ''}` : ''}
+        <label class="verify-box"><input type="checkbox" name="verifie" ${verified ? 'checked' : ''}>
+          <span>Vérifiée par rapport à l'original${verified ? ` <span class="muted small">(${esc(verified)})</span>` : ''}</span></label>
         <div class="editor-actions">
           <button type="button" class="button secondary" id="preview-btn">Aperçu</button>
           <button class="button">${proposal ? 'Publier la recette' : 'Enregistrer'}</button>

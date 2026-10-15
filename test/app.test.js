@@ -205,6 +205,60 @@ test.describe('Admin', () => {
       assert.match(await res.text(), /class="ing">sel/);
     });
 
+    test.describe('Case « Vérifiée » dans l\'éditeur', () => {
+      const saveAs = (user, source, base, verifie) => {
+        const fd = new FormData();
+        fd.set('source', source); fd.set('base', base);
+        if (verifie) fd.set('verifie', 'on');
+        return t.admin('/admin/recettes/pounty', { method: 'POST', body: fd, user });
+      };
+      const checkbox = html => (html.match(/<input[^>]*name="verifie"[^>]*>/) || [''])[0];
+
+      test('la case reflète l\'état de la recette', async () => {
+        assert.doesNotMatch(checkbox(await (await t.admin('/admin/recettes/pounty')).text()), /checked/);
+        const src = t.read('Pounty.cook');
+        fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src.replace('verifie:', 'verifie: Paul 2026-01-01'));
+        const html = await (await t.admin('/admin/recettes/pounty')).text();
+        assert.match(checkbox(html), /checked/);
+        assert.match(html, /Paul 2026-01-01/);
+      });
+
+      test('cocher sans autre modification enregistre la vérification', async () => {
+        const src = t.read('Pounty.cook');
+        assert.equal((await saveAs('Aline', src, sha1(src), true)).status, 302);
+        assert.match(t.read('Pounty.cook'), /^verifie: Aline \d{4}-\d{2}-\d{2}$/m);
+        assert.match(t.log(), /vérifiée par Aline/);
+      });
+
+      test('déjà vérifiée : garde le nom et la date d\'origine', async () => {
+        const src = t.read('Pounty.cook').replace('verifie:', 'verifie: Paul 2026-01-01');
+        fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src);
+        await saveAs('Aline', src.replace('servings: 6', 'servings: 5'), sha1(src), true);
+        const now = t.read('Pounty.cook');
+        assert.match(now, /^verifie: Paul 2026-01-01$/m);
+        assert.match(now, /servings: 5/);
+      });
+
+      test('décocher retire la vérification', async () => {
+        const src = t.read('Pounty.cook').replace('verifie:', 'verifie: Paul 2026-01-01');
+        fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src);
+        await saveAs('Paul', src, sha1(src), false);
+        assert.match(t.read('Pounty.cook'), /^verifie:$/m);
+      });
+
+      test('publier une proposition déjà vérifiée', async () => {
+        const id = '2026-10-15T12-00-00-000Z-aaa111';
+        const dir = path.join(t.submissionsDir, id);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, 'recette.json'), JSON.stringify({ prenom: 'A', titre: 'Crêpes', texte: 'x', photos: [], date: 'd' }));
+        assert.match(checkbox(await (await t.admin(`/admin/propositions/${id}`)).text()), /name="verifie"/);
+        const fd = new FormData();
+        fd.set('fichier', 'Crêpes'); fd.set('source', '---\ntitle: Crêpes\nverifie:\n---\n\n@farine{250%g}\n'); fd.set('verifie', 'on');
+        await t.admin(`/admin/propositions/${id}/publier`, { method: 'POST', body: fd, user: 'Aline' });
+        assert.match(t.read('Crêpes.cook'), /^verifie: Aline \d{4}-\d{2}-\d{2}$/m);
+      });
+    });
+
     test.describe('Disposition original / formulaire / aperçu', () => {
       const editorHtml = async slug => (await t.admin(`/admin/recettes/${slug}`)).text();
       const between = (html, cls) => html.split(`class="${cls}"`)[1] || '';

@@ -102,6 +102,18 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     return r;
   }
 
+  // Case « Vérifiée » du formulaire : cochée → garde la vérification existante ou en crée une
+  // au nom de l'utilisateur ; décochée → vide le champ. En-tête illisible : on laisse validate() le signaler.
+  function verifiedOf(source) {
+    try { return fromSource(source, 'x.cook', null).meta.verifie || ''; } catch { return ''; }
+  }
+  function applyVerified(source, req) {
+    const current = verifiedOf(source);
+    if (req.body.verifie && !current) return setField(source, 'verifie', `${req.user} ${today()}`);
+    if (!req.body.verifie && current) return setField(source, 'verifie', '');
+    return source;
+  }
+
   // Aperçu rendu côté serveur (affiché dès l'ouverture de l'éditeur).
   function previewHtml(source) {
     try {
@@ -116,6 +128,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     ...opts,
     originals: opts.proposal ? proposalImages(opts.proposal) : recipeImages(opts.recipe),
     preview: previewHtml(opts.source),
+    verified: verifiedOf(opts.source),
   });
 
   async function savePlatPhoto(file, baseName) {
@@ -170,6 +183,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       source, fichier, isNew: true, proposal: p, error,
     }));
     try {
+      source = applyVerified(source, req);
       const r = validate(source);
       if (!fichier) return again('Il manque le nom du fichier.');
       const file = `${fichier}.cook`;
@@ -216,10 +230,11 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   });
 
   router.post('/recettes/nouvelle', upload.single('photo_plat'), async (req, res, next) => {
-    const source = String(req.body.source || '').replace(/\r\n/g, '\n');
+    let source = String(req.body.source || '').replace(/\r\n/g, '\n');
     const fichier = safeFileName(String(req.body.fichier || ''));
     const again = error => res.status(400).send(renderEditor({ theme: req.theme, title: 'Nouvelle recette', action: '/admin/recettes/nouvelle', source, fichier, isNew: true, error }));
     try {
+      source = applyVerified(source, req);
       const r = validate(source);
       if (!fichier) return again('Il manque le nom du fichier.');
       if (fs.existsSync(path.join(dir, `${fichier}.cook`))) return again('Une recette porte déjà ce nom de fichier.');
@@ -263,9 +278,13 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       return again('La recette a été modifiée ailleurs pendant que tu l\'éditais (synchro Obsidian ?). Ton texte est ci-dessous ; compare avec la version actuelle en bas avant d\'enregistrer.', true);
     }
     try {
+      const before = verifiedOf(current);
+      source = applyVerified(source, req);
       const r = validate(source);
       if (source === current && !req.file) return back(res, 'recettes', 'Aucun changement.');
-      await git.write(`Site : « ${r.title} » modifiée`, req.user, async () => {
+      const after = r.meta.verifie || '';
+      const what = before === after ? 'modifiée' : after ? `vérifiée par ${req.user}` : 'n’est plus vérifiée';
+      await git.write(`Site : « ${r.title} » ${what}`, req.user, async () => {
         if (source !== current) writeAtomic(full, source);
         if (req.file) await savePlatPhoto(req.file, r0.file.replace(/\.cook$/, ''));
       });
