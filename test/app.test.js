@@ -210,6 +210,30 @@ test.describe('Site public (connecté)', () => {
     });
   });
 
+  test.describe('Infos de base sur les cartes', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const cardOf = (html, slug) => {
+      const i = html.indexOf(`<a href="/recette/${slug}"`);
+      return html.slice(i, html.indexOf('</li>', i));
+    };
+    const setMeta = (file, lines) => fs.writeFileSync(path.join(t.recipesDir, file), t.read(file).replace(/^title: .*$/m, m => `${m}\n${lines}`));
+
+    test('durée totale, portions et régime sous le titre', async () => {
+      setMeta('Pounty.cook', 'prep time: 20 minutes\ncook time: 45 minutes\ndiet: [sans porc, sans gluten]');
+      const card = cardOf(await get('/'), 'pounty');
+      assert.match(card, /<span class="card-facts"><span class="card-fact"><svg class="icon icon-timer"[^>]*>[\s\S]*?<\/svg> 1 h 05<\/span><span class="card-fact">6 pers\.<\/span><span class="card-fact"><svg class="icon icon-leaf"[^>]*>[\s\S]*?<\/svg> sans porc, sans gluten<\/span><\/span>/);
+    });
+
+    test('portions avec leur unité', async () => {
+      setMeta('Pounty.cook', 'servings unit: bouchons');
+      assert.match(cardOf(await get('/'), 'pounty'), /<span class="card-fact">6 bouchons<\/span>/);
+    });
+
+    test('rien de renseigné : pas de ligne d\'infos', async () => {
+      assert.doesNotMatch(cardOf(await get('/'), 'galette-seche'), /card-facts/);
+    });
+  });
+
   test.describe('Panneau de filtres', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
     const panelOf = html => html.slice(html.indexOf('<aside class="filters-panel"'), html.indexOf('</aside>'));
@@ -287,6 +311,12 @@ test.describe('Site public (connecté)', () => {
       assert.equal(tagData(html).length, 3);
       // Ouvert d'office puisqu'une étiquette est filtrée
       assert.match(html, /<details class="tag-cloud" open>[\s\S]*galette des rois/);
+    });
+
+    test('l\'icône SVG d\'étiquette est fournie aux suggestions (pas d\'emoji)', async () => {
+      const html = await get('/');
+      assert.match(html, /<template id="tag-icon"><svg class="icon icon-tag"[^>]*aria-hidden="true">/);
+      assert.doesNotMatch(require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'app.js'), 'utf8'), /🏷/);
     });
 
     test('barre de recherche prête pour les suggestions (combobox)', async () => {

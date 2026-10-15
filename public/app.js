@@ -59,6 +59,7 @@
     const i = Number(range.value);
     maxDuree = i >= stops.length ? null : stops[i];
     label.textContent = maxDuree ? fmt(maxDuree) : 'sans limite';
+    range.style.setProperty('--fill', `${Math.round(i / stops.length * 100)}%`);
     apply();
   });
   range.addEventListener('change', () => { if (desktop.matches) commit(); });
@@ -343,7 +344,9 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
       const li = document.createElement('li');
       li.id = `tag-sugg-${i}`;
       li.setAttribute('role', 'option');
-      li.innerHTML = '<span aria-hidden="true">🏷</span> ';
+      // Icône SVG d'étiquette fournie par la page (<template id="tag-icon">)
+      const tagIcon = document.getElementById('tag-icon');
+      if (tagIcon) li.append(tagIcon.content.cloneNode(true), ' ');
       li.append(t.name, Object.assign(document.createElement('span'), { className: 'count', textContent: ` ${t.count}` }));
       li.addEventListener('mousedown', e => { e.preventDefault(); go(t); });
       return li;

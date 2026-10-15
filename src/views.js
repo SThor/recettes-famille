@@ -55,6 +55,25 @@ ${body}
 </html>`;
 }
 
+// Unité des portions : clé maison « servings unit » (bouchons, cookies, parts…), sinon des personnes.
+function servingsUnit(meta) {
+  const many = String(meta['servings unit'] || '').trim() || 'pers.';
+  return { many, one: many === 'pers.' ? many : many.replace(/(?<=\p{L}{2})[sx]$/u, '') };
+}
+
+// Ligne d'infos d'une carte : durée totale, portions, régime (seulement ce qui est renseigné).
+function cardFacts(r) {
+  const servings = Number(r.meta.servings) || null;
+  const unit = servingsUnit(r.meta);
+  const diets = Array.isArray(r.meta.diet) ? r.meta.diet : r.meta.diet ? [r.meta.diet] : [];
+  const facts = [
+    r.durations?.total && `${icon('timer', 14)} ${formatMinutes(r.durations.total)}`,
+    servings && esc(`${servings} ${servings === 1 ? unit.one : unit.many}`),
+    diets.length && `${icon('leaf', 14)} ${esc(diets.join(', '))}`,
+  ].filter(Boolean);
+  return facts.length ? `<span class="card-facts">${facts.map(f => `<span class="card-fact">${f}</span>`).join('')}</span>` : '';
+}
+
 function card(r, visible = true) {
   const search = [r.title, ...r.ingredients.map(i => i.name), ...r.tags].join(' ').toLowerCase();
   const d = r.durations || {};
@@ -63,6 +82,7 @@ function card(r, visible = true) {
     ${r.photo ? `<img src="/photos/${enc(r.photo)}" alt="" loading="lazy">` : ''}
     <span class="card-title">${esc(r.title)}</span>
     ${r.meta.author ? `<span class="card-meta">de ${esc(r.meta.author)}</span>` : ''}
+    ${cardFacts(r)}
   </a>
 </li>`;
 }
@@ -123,7 +143,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   const stopIndex = found === -1 ? DUREE_STOPS.length : found;
   const dureeBlock = `<div class="duree">
     <label class="filter-title" for="duree-range">${icon('timer', 16)} Durée max <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
-    <input type="range" id="duree-range" min="0" max="${DUREE_STOPS.length}" step="1" value="${stopIndex}" data-stops="${DUREE_STOPS.join(',')}">
+    <input type="range" id="duree-range" min="0" max="${DUREE_STOPS.length}" step="1" value="${stopIndex}" data-stops="${DUREE_STOPS.join(',')}" style="--fill: ${Math.round(stopIndex / DUREE_STOPS.length * 100)}%">
     <div class="duree-presets">${DUREE_PRESETS.map(m => `<a class="duree-preset" data-minutes="${m}" href="${esc(homeUrl(params, { duree: m }))}">${formatMinutes(m)}</a>`).join('')}</div>
     <label class="duree-prep"><input type="checkbox" id="duree-prep" ${temps === 'prep' ? 'checked' : ''}> Préparation seulement</label>
   </div>`;
@@ -149,6 +169,7 @@ ${resultsHead}
     <ul id="tag-suggestions" role="listbox" aria-label="Étiquettes suggérées" hidden></ul>
   </div>
   <script type="application/json" id="tags-data">${jsonForScript(tags)}</script>
+  <template id="tag-icon">${icon('tag', 14)}</template>
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
   </nav>
@@ -218,8 +239,7 @@ function recipeArticle(r, { back = true } = {}) {
   const m = r.meta;
   const servings = Number(m.servings) || null;
   // Clé maison « servings unit » (bouchons, cookies, parts…) ; sinon des personnes.
-  const many = String(m['servings unit'] || '').trim() || 'pers.';
-  const unit = { many, one: many === 'pers.' ? many : many.replace(/(?<=\p{L}{2})[sx]$/u, '') };
+  const unit = servingsUnit(m);
   const facts = [
     m['prep time'] && ['Préparation', m['prep time']],
     m['cook time'] && ['Cuisson', m['cook time']],
