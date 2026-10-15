@@ -283,3 +283,13 @@ button.timer.done { background: #c0392b; color: #fff; animation: timer-blink 1s 
 .timer-stop { color: var(--muted) !important; padding: 4px 8px; }
 body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
 .site-footer a[aria-current="true"] { font-weight: 700; color: var(--text); text-decoration: none; }
+
+/* Suivi : filtres des recettes */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.filter {
+  font: inherit; font-size: .85rem; cursor: pointer; padding: 5px 11px; border-radius: 999px;
+  color: var(--text); background: var(--surface); border: 1px solid var(--border);
+}
+.filter .count { font-size: .8em; opacity: .7; }
+.filter[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.recipes-status > li[hidden] { display: none; }

@@ -204,6 +204,53 @@ test.describe('Admin', () => {
     });
   });
 
+  test.describe('Filtres de l\'onglet Recettes', () => {
+    const dashboard = async () => (await t.admin('/admin')).text();
+    const flagsOf = (html, slug) => {
+      const li = html.match(new RegExp(`<li[^>]*data-flags="([^"]*)"[^>]*>\\s*<div class="row">\\s*<a href="/admin/recettes/${slug}"`));
+      return li ? li[1].split(' ').filter(Boolean).sort() : null;
+    };
+    const chip = (html, filter) => (html.match(new RegExp(`<button type="button" class="filter" data-filter="${filter}"[^>]*>[^<]*<span class="count">(\\d+)</span>`)) || [])[1];
+
+    // Recette complète : toutes les infos, photo du plat, vérifiée, aucune question.
+    const addComplete = () => {
+      fs.writeFileSync(path.join(t.recipesDir, 'Tarte finie.cook'), '---\ntitle: Tarte finie\nauthor: Maman\nsource: fiche\nservings: 6\ncourse: dessert\nverifie: Paul 2026-10-15\n---\n\nCuire la @pâte{1}.\n');
+      fs.copyFileSync(path.join(t.recipesDir, 'Originaux', 'galette.jpg'), path.join(t.recipesDir, 'Tarte finie.jpg'));
+    };
+
+    test('chaque recette porte ses états', async () => {
+      addComplete();
+      const html = await dashboard();
+      assert.deepEqual(flagsOf(html, 'pounty'), ['a-finir', 'photo', 'questions']);
+      assert.deepEqual(flagsOf(html, 'galette-seche'), ['a-finir', 'a-verifier', 'infos', 'photo']);
+      assert.deepEqual(flagsOf(html, 'tarte-finie'), ['terminee']);
+    });
+
+    test('une recette vérifiée mais avec une question n\'est pas terminée', async () => {
+      const src = t.read('Pounty.cook').replace('verifie:', 'verifie: Paul 2026-10-15').replace('servings: 6', 'servings: 6');
+      fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src);
+      fs.copyFileSync(path.join(t.recipesDir, 'Originaux', 'galette.jpg'), path.join(t.recipesDir, 'Pounty.jpg'));
+      assert.deepEqual(flagsOf(await dashboard(), 'pounty'), ['a-finir', 'questions']);
+    });
+
+    test('rangée de filtres avec leurs compteurs', async () => {
+      addComplete();
+      const html = await dashboard();
+      assert.match(html, /<div class="filters" role="group" aria-label="Filtrer les recettes">/);
+      assert.equal(chip(html, 'toutes'), '3');
+      assert.equal(chip(html, 'a-finir'), '2');
+      assert.equal(chip(html, 'questions'), '1');
+      assert.equal(chip(html, 'a-verifier'), '1');
+      assert.equal(chip(html, 'infos'), '1');
+      assert.equal(chip(html, 'photo'), '2');
+      assert.equal(chip(html, 'terminee'), '1');
+    });
+
+    test('message quand un filtre ne garde aucune recette', async () => {
+      assert.match(await dashboard(), /<p class="muted filter-empty" hidden>Aucune recette pour ce filtre\.<\/p>/);
+    });
+  });
+
   test('tableau de suivi : compteurs calculés depuis les fichiers', async () => {
     const html = await (await t.admin('/admin')).text();
     assert.match(html, /<b>2 recettes<\/b> · vérifiées : 0\/2 · portions : 1\/2 · photos du plat : 0\/2 · auteur : 1\/2/);

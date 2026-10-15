@@ -1,6 +1,28 @@
 const { esc, enc, layout, ASSET_V } = require('./views');
 
 const yes = ok => `<span class="badge ${ok ? 'ok' : 'ko'}">${ok ? '✓' : '✗'}</span>`;
+
+// États d'une recette pour les filtres du suivi. « terminee » = tout est renseigné, photo du plat,
+// conforme à l'original et aucune question en suspens ; sinon « a-finir » + ce qui manque.
+function recipeFlags(r) {
+  const m = r.meta;
+  const flags = [];
+  if (r.questions.length) flags.push('questions');
+  else if (!m.verifie) flags.push('a-verifier');
+  if (!m.author || !m.source || !m.servings) flags.push('infos');
+  if (!r.photo) flags.push('photo');
+  return flags.length || !m.verifie ? ['a-finir', ...flags] : ['terminee'];
+}
+
+const FILTERS = [
+  ['toutes', 'Toutes'],
+  ['a-finir', 'À finir'],
+  ['questions', 'Questions'],
+  ['a-verifier', 'À vérifier'],
+  ['infos', 'Infos manquantes'],
+  ['photo', 'Sans photo'],
+  ['terminee', 'Terminées'],
+];
 const wikiText = s => esc(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a);
 
 function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
@@ -42,8 +64,12 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
 
   ${panel('recettes', `<div class="panel-head"><h2>Recettes</h2><a class="button button-small" href="/admin/recettes/nouvelle">+ Nouvelle recette</a></div>
   <p class="stats"><b>${n} recettes</b> · ${stats.map(([k, v]) => `${k} : ${v}/${n}`).join(' · ')}</p>
+  <div class="filters" role="group" aria-label="Filtrer les recettes">
+    ${FILTERS.map(([id, label]) => `<button type="button" class="filter" data-filter="${id}" aria-pressed="${id === 'toutes'}">${label} <span class="count">${id === 'toutes' ? n : recipes.filter(r => recipeFlags(r).includes(id)).length}</span></button>`).join('')}
+  </div>
+  <p class="muted filter-empty" hidden>Aucune recette pour ce filtre.</p>
   <ul class="admin-list recipes-status">
-  ${recipes.map(r => `<li>
+  ${recipes.map(r => `<li data-flags="${recipeFlags(r).join(' ')}">
     <div class="row">
       <a href="/admin/recettes/${r.slug}"><b>${esc(r.title)}</b></a>
       <a class="muted small" href="/recette/${r.slug}">voir</a>

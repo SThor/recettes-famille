@@ -68,3 +68,30 @@ if (dash) {
   // Le navigateur a pu défiler jusqu'à l'ancre : on revient en haut.
   requestAnimationFrame(() => window.scrollTo({ top: 0 }));
 }
+
+// Suivi : filtres de l'onglet Recettes (le dernier choix est mémorisé sur l'appareil).
+const filterBar = document.querySelector('.filters');
+if (filterBar) {
+  const items = [...document.querySelectorAll('.recipes-status > li[data-flags]')];
+  const empty = document.querySelector('.filter-empty');
+  const KEY = 'filtre-recettes';
+  const apply = id => {
+    if (!filterBar.querySelector(`[data-filter="${id}"]`)) id = 'toutes';
+    let shown = 0;
+    for (const li of items) {
+      const keep = id === 'toutes' || li.dataset.flags.split(' ').includes(id);
+      li.hidden = !keep;
+      if (keep) shown++;
+    }
+    empty.hidden = shown > 0;
+    filterBar.querySelectorAll('.filter').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === id)));
+    try { localStorage.setItem(KEY, id); } catch {}
+  };
+  filterBar.addEventListener('click', e => {
+    const btn = e.target.closest('.filter');
+    if (btn) apply(btn.dataset.filter);
+  });
+  let saved = 'toutes';
+  try { saved = localStorage.getItem(KEY) || 'toutes'; } catch {}
+  apply(saved);
+}
