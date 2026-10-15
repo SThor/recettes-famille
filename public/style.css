@@ -467,3 +467,8 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .card-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px; font-size: .8rem; color: var(--muted); }
 .card-fact { display: inline-flex; align-items: center; gap: 4px; }
 .card-fact .icon { color: var(--accent); }
+/* Bloc « Personnes » : même présentation que Régimes */
+.filters-panel .people { margin: 0; padding: 10px 0; border-top: 1px solid var(--border); }
+.filters-panel .people .tags { margin: 8px 0 0; }
+.filters-panel .people .person { font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap; }
+.filters-panel .people .person .count { color: var(--muted); font-size: .85em; }

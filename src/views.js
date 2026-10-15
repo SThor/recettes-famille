@@ -1,4 +1,4 @@
-const { slugify } = require('./recipes');
+const { slugify, peopleOf } = require('./recipes');
 const { toSeconds, formatMinutes } = require('./durations');
 const { icon } = require('./icons');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
@@ -75,7 +75,8 @@ function cardFacts(r) {
 }
 
 function card(r, visible = true) {
-  const search = [r.title, ...r.ingredients.map(i => i.name), ...r.tags].join(' ').toLowerCase();
+  // Recherche libre : titre, ingrédients, étiquettes, personnes (rapporteur + origine) et source.
+  const search = [r.title, ...r.ingredients.map(i => i.name), ...r.tags, ...peopleOf(r), r.meta.source && asText(r.meta.source)].filter(Boolean).join(' ').toLowerCase();
   const d = r.durations || {};
   return `<li class="card"${visible ? '' : ' hidden'} data-search="${esc(search)}" data-prep="${d.prep ?? ''}" data-total="${d.total ?? ''}">
   <a href="/recette/${r.slug}">
@@ -107,7 +108,7 @@ function homeUrl(params, changes = {}) {
   return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
 }
 
-function home({ groups, fits = () => true, theme, tag = '', regime = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [] }) {
+function home({ groups, fits = () => true, theme, tag = '', regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
 
@@ -115,6 +116,7 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
   // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
   const active = [
     regime && ['leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
+    personne && ['person', `Personne : <b>${esc(personne)}</b>`, { personne: null }],
     tag && ['tag', `Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
     duree && ['timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
@@ -129,6 +131,10 @@ function home({ groups, fits = () => true, theme, tag = '', regime = '', duree =
 
   // Les trois filtres du panneau ont le même titre (.filter-title : icône, libellé, compteur) ;
   // régimes et étiquettes sont dépliables, ouverts d'office quand un de leurs filtres est actif.
+  const peopleRow = people.length ? `<details class="people"${personne ? ' open' : ''}>
+    <summary class="filter-title">${icon('person', 16)} Personnes <span class="count">${people.length}</span></summary>
+    <div class="tags">${people.map(p => `<a class="person" href="${esc(homeUrl(params, { personne: p.name }))}">${esc(p.name)} <span class="count">${p.count}</span></a>`).join('')}</div>
+  </details>` : '';
   const dietRow = diets.length ? `<details class="diets"${regime ? ' open' : ''}>
     <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
     <div class="tags">${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join('')}</div>
@@ -158,6 +164,7 @@ ${resultsHead}
 <div class="home-layout">
 <aside class="filters-panel" id="filtres" aria-label="Filtres">
   <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}</div>
+  ${peopleRow}
   ${dietRow}
   ${dureeBlock}
   ${tagCloud}
@@ -165,7 +172,7 @@ ${resultsHead}
 </aside>
 <div class="home-results">
   <div class="search-box">
-    <input type="search" id="search" placeholder="Chercher une recette, un ingrédient, une étiquette…" aria-label="Chercher" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tag-suggestions" aria-expanded="false">
+    <input type="search" id="search" placeholder="Chercher une recette, un ingrédient, une personne…" aria-label="Chercher" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="tag-suggestions" aria-expanded="false">
     <ul id="tag-suggestions" role="listbox" aria-label="Étiquettes suggérées" hidden></ul>
   </div>
   <script type="application/json" id="tags-data">${jsonForScript(tags)}</script>
@@ -248,12 +255,16 @@ function recipeArticle(r, { back = true } = {}) {
     m.difficulty && ['Difficulté', m.difficulty],
     m.cuisine && ['Cuisine', m.cuisine],
     m.diet && ['Régime', m.diet],
+    m.from && ['Recette de', m.from], // clé maison : personne(s) d'origine
     m.source && ['Source', m.source],
     m.author && ['Transmise par', m.author],
-  ].filter(Boolean).map(([k, v]) => [k, k === 'Régime'
-    // Chaque régime mène à l'accueil filtré sur ce régime.
-    ? (Array.isArray(v) ? v : [v]).map(d => `<a href="/?regime=${encodeURIComponent(d)}">${esc(d)}</a>`).join(', ')
-    : esc(asText(v))]);
+  ].filter(Boolean).map(([k, v]) => {
+    // Régimes et personnes mènent à l'accueil filtré sur cette valeur.
+    const param = { 'Régime': 'regime', 'Recette de': 'personne', 'Transmise par': 'personne' }[k];
+    return [k, param
+      ? (Array.isArray(v) ? v : [v]).map(d => `<a href="/?${param}=${encodeURIComponent(d)}">${esc(d)}</a>`).join(', ')
+      : esc(asText(v))];
+  });
 
   // Numérotation des étapes : repart à 1 à chaque section ; photos d'étape indexées sur toute la recette.
   let stepNo = 0;

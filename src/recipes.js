@@ -106,14 +106,17 @@ function linkRecipes(recipes) {
 
 // Valeurs (étiquettes, régimes…) comptées sur toutes les recettes : [{ name, count }], par fréquence
 // puis par nom. Les variantes de casse sont regroupées ; on garde la graphie la plus courante
-// (en minuscules à égalité).
-function countValues(recipes, valuesOf) {
+// (à égalité : en minuscules, ou avec majuscule si `capitalized`, pour les noms de personnes).
+// Une valeur présente deux fois dans une même recette (casse différente) n'y compte qu'une fois.
+function countValues(recipes, valuesOf, { capitalized = false } = {}) {
   const groups = new Map();
   for (const r of recipes) {
-    for (const raw of new Set(valuesOf(r).map(String))) {
+    const seen = new Set();
+    for (const raw of valuesOf(r).map(String)) {
       const value = raw.trim();
       const key = normValue(value);
-      if (!key) continue;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
       const g = groups.get(key) || { count: 0, spellings: new Map() };
       g.count++;
       g.spellings.set(value, (g.spellings.get(value) || 0) + 1);
@@ -121,11 +124,15 @@ function countValues(recipes, valuesOf) {
     }
   }
   return [...groups.values()].map(g => {
-    const [name] = [...g.spellings].sort((a, b) => b[1] - a[1] || (a[0] === a[0].toLowerCase() ? -1 : 1))[0];
+    const preferred = s => (capitalized ? s !== s.toLowerCase() : s === s.toLowerCase());
+    const [name] = [...g.spellings].sort((a, b) => b[1] - a[1] || (preferred(a[0]) ? -1 : preferred(b[0]) ? 1 : 0))[0];
     return { name, count: g.count };
   }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 }
 const normValue = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Personnes liées à une recette : qui l'a transmise (`author`) et de qui elle vient (clé maison `from`).
+const peopleOf = r => [...asList(r.meta.author), ...asList(r.meta.from)].map(String).filter(s => s.trim());
 
 function createStore(dir) {
   let cache = null;
@@ -158,6 +165,8 @@ function createStore(dir) {
     tags() { return countValues(load(), r => r.tags); },
     // Régimes (clé `diet`, texte ou liste), comptés comme les étiquettes.
     diets() { return countValues(load(), r => asList(r.meta.diet)); },
+    // Personnes (rapporteurs + origines fusionnés), comptées comme les étiquettes.
+    people() { return countValues(load(), peopleOf, { capitalized: true }); },
     grouped(keep = () => true) {
       const recipes = load().filter(keep);
       const known = COURSES.map(([key, label]) => ({ key, label, recipes: recipes.filter(r => r.course === key) }));
@@ -177,4 +186,4 @@ function createStore(dir) {
   };
 }
 
-module.exports = { normValue, asList, createStore, fromSource, slugify, PHOTO_EXT, COURSES };
+module.exports = { normValue, asList, peopleOf, createStore, fromSource, slugify, PHOTO_EXT, COURSES };

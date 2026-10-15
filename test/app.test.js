@@ -210,6 +210,43 @@ test.describe('Site public (connecté)', () => {
     });
   });
 
+  test.describe('Filtre par personne (rapporteur « author » + origine « from » fusionnés)', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const cardsOf = html => [...html.matchAll(/<li class="card"(?![^>]*\bhidden\b)[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort();
+    const write = (file, meta) => fs.writeFileSync(path.join(t.recipesDir, file), `---\n${meta}\n---\n\nMélanger.\n`);
+
+    test.beforeEach(() => {
+      write('Roulé.cook', 'title: Roulé\nauthor: Maman\nfrom: Carole');               // venue de Carole, transmise par Maman
+      write('Salade.cook', 'title: Salade\nauthor: carole\nfrom: [Grand-Maman, Papa]'); // transmise par Carole
+    });
+
+    test('bloc « Personnes » : rapporteurs et personnes d\'origine fusionnés, comptés', async () => {
+      const html = await get('/');
+      const block = html.slice(html.indexOf('<details class="people"'), html.indexOf('</details>', html.indexOf('<details class="people"')));
+      assert.match(block, /<summary class="filter-title"><svg class="icon icon-person"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Personnes <span class="count">5<\/span><\/summary>/);
+      assert.match(block, /<a class="person" href="\/\?personne=Carole">Carole <span class="count">2<\/span><\/a>/);
+      for (const name of ['Annie', 'Maman', 'Grand-Maman', 'Papa']) assert.match(block, new RegExp(`>${name} <span class="count">1</span></a>`));
+    });
+
+    test('l\'accueil filtré garde les recettes où la personne est rapporteuse et/ou d\'origine', async () => {
+      const html = await get('/?personne=carole');
+      assert.deepEqual(cardsOf(html), ['roule', 'salade']);
+      assert.match(html, /<li class="filter-pill"><span class="pill-label"><svg class="icon icon-person"[^>]*>[\s\S]*?<\/svg> Personne : <b>carole<\/b><\/span>/);
+    });
+
+    test('la recherche libre trouve aussi les personnes', async () => {
+      const html = await get('/');
+      assert.match(html, /<li class="card" data-search="[^"]*carole[^"]*"[^>]*>\s*<a href="\/recette\/roule"/);
+      assert.match(html, /<li class="card" data-search="[^"]*annie[^"]*"[^>]*>\s*<a href="\/recette\/pounty"/);
+    });
+
+    test('page recette : « Transmise par » et « Recette de » mènent au filtre', async () => {
+      const html = await get('/recette/salade');
+      assert.match(html, /<dt>Recette de<\/dt><dd><a href="\/\?personne=Grand-Maman">Grand-Maman<\/a>, <a href="\/\?personne=Papa">Papa<\/a><\/dd>/);
+      assert.match(html, /<dt>Transmise par<\/dt><dd><a href="\/\?personne=carole">carole<\/a><\/dd>/);
+    });
+  });
+
   test.describe('Infos de base sur les cartes', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
     const cardOf = (html, slug) => {

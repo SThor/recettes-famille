@@ -3,7 +3,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { createStore, slugify, normValue, asList } = require('./recipes');
+const { createStore, slugify, normValue, asList, peopleOf } = require('./recipes');
 const views = require('./views');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
@@ -89,10 +89,11 @@ function createApp({
     const param = name => (typeof req.query[name] === 'string' ? req.query[name].trim() : '');
     const tag = param('tag');
     const regime = param('regime');
+    const personne = param('personne');
     const duree = /^\d{1,4}$/.test(param('duree')) && Number(param('duree')) > 0 ? Number(param('duree')) : null;
     const temps = param('temps') === 'prep' ? 'prep' : 'total';
     const has = (values, wanted) => values.some(x => normValue(x) === normValue(wanted));
-    const base = r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime));
+    const base = r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime)) && (!personne || has(peopleOf(r), personne));
     const minutes = r => (temps === 'prep' ? r.durations.prep : r.durations.total);
     // Les recettes hors durée restent dans la page, masquées : le curseur peut les réafficher en direct.
     const groups = store.grouped(base);
@@ -100,8 +101,8 @@ function createApp({
     // Recettes écartées faute de durée renseignée (signalées sous le bandeau).
     const unknown = duree ? store.all().filter(r => base(r) && minutes(r) == null).length : 0;
     // Paramètres de filtre actuels, dans l'ordre de l'URL (pour construire les liens).
-    const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
-    res.send(views.home({ groups, fits, theme: req.theme, tag, regime, duree, temps, unknown, params, tags: store.tags(), diets: store.diets() }));
+    const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'personne', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
+    res.send(views.home({ groups, fits, theme: req.theme, tag, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
   });
 
   app.get('/recette/:slug', (req, res) => {
