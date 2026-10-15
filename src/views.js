@@ -26,7 +26,7 @@ function layout({ title, theme, body, bodyClass = '' }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${esc(title)} · Recettes de famille</title>
+<title>${esc(title)} · Recettes de la Givellerie</title>
 ${assets.fonts ? `<link rel="stylesheet" id="fonts-css" href="${assets.fonts}">` : ''}
 <link rel="stylesheet" href="/static/style.css?v=${ASSET_V}">
 ${assets.css ? `<link rel="stylesheet" id="theme-css" href="${assets.css}">` : ''}
@@ -34,7 +34,7 @@ ${assets.css ? `<link rel="stylesheet" id="theme-css" href="${assets.css}">` : '
 </head>
 <body class="theme-${theme} ${bodyClass}">
 <header class="site-header">
-  <a class="brand" href="/">Recettes de famille</a>
+  <a class="brand" href="/">Recettes de la Givellerie</a>
   <a class="header-action" href="/proposer">+ Proposer</a>
 </header>
 <main>
@@ -68,8 +68,8 @@ function card(r) {
 function home({ groups, theme }) {
   const body = `
 <section class="intro">
-  <h1>Le livre de recettes de la famille</h1>
-  <p>Les recettes de Maman, de Grand-Maman et de la givellerie étendue.</p>
+  <h1>Le livre de recettes de la famille Givel</h1>
+  <p>Les recettes de Maman, de Grand-Maman et de la Givellerie étendue.</p>
   <input type="search" id="search" placeholder="Chercher une recette, un ingrédient…" aria-label="Chercher" autocomplete="off">
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
@@ -220,8 +220,8 @@ function thanks({ theme, prenom }) {
 
 function login({ theme, error }) {
   const body = `<section class="form-page center">
-  <h1>Recettes de famille</h1>
-  <p>Ce petit livre est réservé à la famille.</p>
+  <h1>Recettes de la Givellerie</h1>
+  <p>Ce petit livre est réservé à la famille Givel.</p>
   ${error ? `<p class="error">${esc(error)}</p>` : ''}
   <form method="post" action="/connexion" class="login">
     <label>Mot de passe de la famille<input type="password" name="motdepasse" required autocomplete="current-password"></label>
