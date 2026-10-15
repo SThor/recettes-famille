@@ -16,6 +16,14 @@ npm install
 RECIPES_DIR="<vault>/Recettes" npm run dev
 ```
 
+## Tests
+
+```bash
+npm test
+```
+
+`node:test`, sans dépendance. Unitaires (parseur Cooklang, `À demander.md`, en-tête YAML), intégration HTTP sur un dépôt git jetable (accès, admin, éditeur, propositions, conflits), et script de synchro (fusion, conflit). `deploy/deploy.sh` les lance avant de déployer. Règle : on écrit les tests avant la fonctionnalité (voir CLAUDE.md).
+
 ## Recettes : synchro git dans les deux sens
 
 Le dossier `Recettes/` du vault et `~/recettes-famille/recettes` sur le VPS sont deux copies d'un même dépôt git (branche `main`).
