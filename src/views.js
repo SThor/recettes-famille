@@ -1,3 +1,4 @@
+const { slugify } = require('./recipes');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
 const ASSET_V = Date.now().toString(36);
 
@@ -75,24 +76,34 @@ ${groups.map(g => `
   return layout({ title: 'Accueil', theme, body });
 }
 
-function fmtAmount(a, scalable) {
-  const qty = scalable && a.value != null
-    ? `<span class="qty" data-v="${a.value}">${esc(a.quantity)}</span>`
-    : esc(a.quantity);
+// Quantité affichée ; data-v permet de la recalculer selon les portions (sauf quantité fixe « = »).
+function fmtAmount(a) {
+  const qty = a.fixed
+    ? `<span class="qty fixed">${esc(a.quantity)}</span>`
+    : a.value != null ? `<span class="qty" data-v="${a.value}">${esc(a.quantity)}</span>` : esc(a.quantity);
   return `${qty}${a.unit ? `&nbsp;${esc(a.unit)}` : ''}`;
+}
+
+// Nom d'ingrédient ; une référence (@./Pâte brisée{}) devient un lien vers cette recette.
+function ingName(i) {
+  if (!i.ref) return esc(i.name);
+  return `<a class="recipe-ref" href="/recette/${slugify(i.ref.split('/').pop())}">${esc(i.name)}</a>`;
 }
 
 function stepHtml(parts) {
   return parts.map(p => {
     if (p.type === 'text') return esc(p.value);
     if (p.type === 'ingredient') {
-      const amount = p.quantity ? ` <span class="amount">(${fmtAmount(p, true)})</span>` : '';
-      return `<span class="ing">${esc(p.name)}${amount}</span>`;
+      const amount = p.quantity ? ` <span class="amount">(${fmtAmount(p)})</span>` : '';
+      return `<span class="ing">${ingName(p)}${amount}</span>`;
     }
     if (p.type === 'cookware') return `<span class="tool">${esc(p.name)}</span>`;
-    return `<span class="timer">⏲&nbsp;${esc(p.quantity)}${p.unit ? ' ' + esc(p.unit) : ''}</span>`;
+    const duration = `${esc(p.quantity)}${p.unit ? ' ' + esc(p.unit) : ''}`;
+    return `<span class="timer">⏲&nbsp;${p.name ? `${esc(p.name)} : ` : ''}${duration}</span>`;
   }).join('');
 }
+
+const asText = v => (Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v ? v.name || '' : String(v));
 
 function recipeArticle(r, { back = true } = {}) {
   const m = r.meta;
@@ -100,11 +111,25 @@ function recipeArticle(r, { back = true } = {}) {
   const facts = [
     m['prep time'] && ['Préparation', m['prep time']],
     m['cook time'] && ['Cuisson', m['cook time']],
+    m['rest time'] && ['Repos', m['rest time']], // clé maison : temps de repos (frigo, pousse…)
+    m.time && ['Temps total', m.time],
+    m.difficulty && ['Difficulté', m.difficulty],
+    m.cuisine && ['Cuisine', m.cuisine],
+    m.diet && ['Régime', m.diet],
     m.source && ['Source', m.source],
     m.author && ['Transmise par', m.author],
-  ].filter(Boolean);
+  ].filter(Boolean).map(([k, v]) => [k, asText(v)]);
 
+  // Numérotation des étapes : repart à 1 à chaque section ; photos d'étape indexées sur toute la recette.
   let stepNo = 0;
+  let stepIndex = -1;
+  const itemHtml = it => {
+    if (it.type === 'section') { stepNo = 0; return `<h3 class="step-section">${esc(it.title)}</h3>`; }
+    if (it.type === 'note') return `<blockquote class="note">${it.lines.map(esc).join('<br>')}</blockquote>`;
+    const photo = r.stepPhotos?.[++stepIndex];
+    return `<div class="step"><span class="step-no">${++stepNo}</span><div><p>${stepHtml(it.parts)}</p>${photo ? `<img class="step-photo" src="/photos/${enc(photo)}" alt="" loading="lazy">` : ''}</div></div>`;
+  };
+
   return `
 <article class="recipe" ${servings ? `data-servings="${servings}"` : ''}>
   ${back ? `<a class="back" href="/#${esc(r.course || '')}">← Toutes les recettes</a>` : ''}
@@ -125,8 +150,8 @@ function recipeArticle(r, { back = true } = {}) {
     </div>
     <ul>
       ${r.ingredients.map(i => `<li><label><input type="checkbox">
-        <span>${esc(i.name)}${i.optional ? ' <em>(facultatif)</em>' : ''}</span>
-        <span class="amounts">${i.amounts.map(a => fmtAmount(a, true)).join(' + ')}</span>
+        <span>${ingName(i)}${i.notes?.length ? ` <span class="ing-note">(${i.notes.map(esc).join(', ')})</span>` : ''}${i.optional ? ' <em>(facultatif)</em>' : ''}</span>
+        <span class="amounts">${i.amounts.map(a => fmtAmount(a)).join(' + ')}</span>
       </label></li>`).join('')}
     </ul>
     ${r.cookware.length ? `<p class="cookware"><strong>Ustensiles :</strong> ${r.cookware.map(esc).join(', ')}</p>` : ''}
@@ -134,10 +159,7 @@ function recipeArticle(r, { back = true } = {}) {
 
   <section class="steps">
     <h2>Préparation</h2>
-    ${r.items.map(it => it.type === 'note'
-      ? `<blockquote class="note">${it.lines.map(esc).join('<br>')}</blockquote>`
-      : `<div class="step"><span class="step-no">${++stepNo}</span><p>${stepHtml(it.parts)}</p></div>`
-    ).join('\n')}
+    ${r.items.map(itemHtml).join('\n')}
   </section>
 
   ${r.originals.length ? `<details class="originals">

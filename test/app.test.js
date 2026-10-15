@@ -60,6 +60,20 @@ test.describe('Site public (connecté)', () => {
     assert.equal((await t.req('/photos/Pounty.cook', { headers: { cookie } })).status, 404);
   });
 
+  test('photo d\'étape « Recette.N.jpg » (N à partir de 0) sous la bonne étape', async () => {
+    const html = await (await t.req('/recette/pounty', { headers: { cookie } })).text();
+    const stepsHtml = html.split('class="step"').slice(1);
+    assert.equal(stepsHtml.length, 3);
+    assert.doesNotMatch(stepsHtml[0], /step-photo/);
+    assert.match(stepsHtml[1], /<img class="step-photo" src="\/photos\/Pounty\.1\.jpg"/);
+    assert.equal((await t.req('/photos/Pounty.1.jpg', { headers: { cookie } })).status, 200);
+  });
+
+  test('la photo d\'étape n\'est pas prise pour la photo du plat', async () => {
+    const html = await (await t.req('/recette/pounty', { headers: { cookie } })).text();
+    assert.doesNotMatch(html, /class="hero"/);
+  });
+
   test('recette inconnue → 404', async () => {
     assert.equal((await t.req('/recette/nope', { headers: { cookie } })).status, 404);
   });

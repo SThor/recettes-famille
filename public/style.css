@@ -248,3 +248,11 @@ form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-
   .admin-tabs a { padding: 5px 2px; font-size: .78rem; line-height: 1.2; text-align: center; border-radius: 10px; overflow-wrap: anywhere; }
   .admin-tabs .count { display: block; }
 }
+
+/* Syntaxes Cooklang avancées */
+.step > div { min-width: 0; flex: 1; }
+.step-photo { margin-top: 8px; border-radius: var(--radius); border: 1px solid var(--border); }
+.step-section { font-family: var(--font-title); font-size: 1.05rem; margin: 1.4em 0 .6em; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.recipe-ref { font-weight: 600; }
+.ing-note { color: var(--muted); font-size: .9em; }
+.qty.fixed { font-style: normal; }

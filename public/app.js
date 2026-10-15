@@ -35,6 +35,6 @@ if (recipe) {
   recipe.querySelectorAll('.servings button').forEach(btn => btn.addEventListener('click', () => {
     current = Math.max(1, current + Number(btn.dataset.step));
     count.textContent = current;
-    recipe.querySelectorAll('.qty').forEach(el => { el.textContent = fmt(Number(el.dataset.v) * current / base); });
+    recipe.querySelectorAll('.qty[data-v]').forEach(el => { el.textContent = fmt(Number(el.dataset.v) * current / base); });
   }));
 }

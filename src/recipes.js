@@ -40,7 +40,11 @@ function fromSource(src, file, dir) {
   const base = file.replace(/\.cook$/, '');
   const r = parse(src);
   if (typeof r.meta !== 'object' || Array.isArray(r.meta)) throw new Error('En-tête YAML invalide');
-  const photo = dir ? PHOTO_EXT.map(e => base + e).find(p => fs.existsSync(path.join(dir, p))) : null;
+  const findImage = name => (dir ? PHOTO_EXT.map(e => name + e).find(p => fs.existsSync(path.join(dir, p))) : null);
+  const photo = findImage(base);
+  // Photos d'étape (convention Cooklang) : « Recette.N.jpg », N = rang de l'étape à partir de 0.
+  const stepCount = r.items.filter(i => i.type === 'step').length;
+  const stepPhotos = Array.from({ length: stepCount }, (_, n) => findImage(`${base}.${n}`) || null);
   return {
     slug: slugify(base),
     file,
@@ -50,6 +54,7 @@ function fromSource(src, file, dir) {
     originals: asList(r.meta.original),
     tags: asList(r.meta.tags),
     questions: openQuestions(src),
+    stepPhotos,
     ...r,
   };
 }
