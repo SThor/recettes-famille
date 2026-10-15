@@ -214,8 +214,13 @@ form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-
   /* L'aperçu est toujours visible et se met à jour tout seul : bouton inutile. */
   #preview-btn { display: none; }
 }
-.verify-box { display: flex; gap: 10px; align-items: baseline; font-weight: 600; margin: 4px 0 8px; cursor: pointer; }
+.verify-box { margin: 4px 0 8px; }
+.verify-box label { display: flex; gap: 10px; align-items: baseline; font-weight: 600; margin: 0; cursor: pointer; }
 .verify-box input { accent-color: var(--accent); width: 20px; height: 20px; flex: none; transform: translateY(4px); }
+.verify-box p { margin: 2px 0 6px 30px; }
+.questions { color: #9a5a00; font-size: .9rem; }
+.verify-box .questions { margin-left: 30px; }
+.verify-box .questions ul { margin: 4px 0 0; padding-left: 18px; }
 
 /* Suivi : en-tête du site non épinglé, barre d'onglets épinglée à sa place */
 .page-dashboard .site-header { position: relative; }

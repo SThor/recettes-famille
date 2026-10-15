@@ -129,6 +129,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     originals: opts.proposal ? proposalImages(opts.proposal) : recipeImages(opts.recipe),
     preview: previewHtml(opts.source),
     verified: verifiedOf(opts.source),
+    questions: (() => { try { return fromSource(String(opts.source || ''), 'x.cook', null).questions; } catch { return []; } })(),
   });
 
   async function savePlatPhoto(file, baseName) {

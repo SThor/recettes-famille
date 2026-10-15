@@ -22,6 +22,19 @@ function asList(v) {
   return Array.isArray(v) ? v.filter(Boolean) : [v];
 }
 
+// Questions ouvertes : commentaires Cooklang du corps (`-- …` et `[- … -]`), invisibles dans le livre.
+function openQuestions(src) {
+  const body = src.replace(/^﻿/, '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+  const questions = [];
+  const rest = body.replace(/\[-([\s\S]*?)-\]/g, (_, q) => { questions.push(q.trim()); return ''; });
+  for (const line of rest.split(/\r?\n/)) {
+    const m = line.match(/(?:^|\s)--(?!-)\s*(.*)$/);
+    if (m && m[1].trim()) questions.push(m[1].trim());
+  }
+  // Ordre d'apparition : les blocs ont été relevés en premier, on retrie selon leur position.
+  return questions.sort((a, b) => body.indexOf(a) - body.indexOf(b));
+}
+
 // Construit l'objet recette à partir du source Cooklang (lève une erreur si l'en-tête YAML est invalide).
 function fromSource(src, file, dir) {
   const base = file.replace(/\.cook$/, '');
@@ -36,6 +49,7 @@ function fromSource(src, file, dir) {
     photo: photo || null,
     originals: asList(r.meta.original),
     tags: asList(r.meta.tags),
+    questions: openQuestions(src),
     ...r,
   };
 }

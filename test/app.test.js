@@ -146,6 +146,29 @@ test.describe('Admin', () => {
     });
   });
 
+  test.describe('« Vérifiée » = conforme à l’original, questions ouvertes signalées', () => {
+    const rowOf = (html, slug) => html.slice(html.indexOf(`href="/admin/recettes/${slug}"`), html.indexOf('</li>', html.indexOf(`href="/admin/recettes/${slug}"`)));
+
+    test('libellé explicite dans le suivi et dans l’éditeur', async () => {
+      assert.match(rowOf(await (await t.admin('/admin')).text(), 'pounty'), /Conforme à l’original/);
+      const editor = await (await t.admin('/admin/recettes/pounty')).text();
+      assert.match(editor, /Conforme à l’original/);
+      assert.match(editor, /tant qu’il reste des questions/);
+    });
+
+    test('le suivi signale les questions ouvertes', async () => {
+      const html = await (await t.admin('/admin')).text();
+      assert.match(rowOf(html, 'pounty'), /1 question/);
+      assert.doesNotMatch(rowOf(html, 'galette-seche'), /\d+ questions?/);
+    });
+
+    test('l’éditeur liste les questions ouvertes près de la case', async () => {
+      const html = await (await t.admin('/admin/recettes/pounty')).text();
+      const box = html.slice(html.indexOf('class="verify-box"'), html.indexOf('class="editor-actions"'));
+      assert.match(box, /point à vérifier avec Annie/);
+    });
+  });
+
   test('tableau de suivi : compteurs calculés depuis les fichiers', async () => {
     const html = await (await t.admin('/admin')).text();
     assert.match(html, /<b>2 recettes<\/b> · vérifiées : 0\/2 · portions : 1\/2 · photos du plat : 0\/2 · auteur : 1\/2/);

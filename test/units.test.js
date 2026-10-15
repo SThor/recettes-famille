@@ -5,7 +5,7 @@ const path = require('path');
 const { parse } = require('../src/cooklang');
 const { parseTodo, serializeTodo, findItem } = require('../src/todo');
 const { setField, yamlList } = require('../src/frontmatter');
-const { slugify } = require('../src/recipes');
+const { slugify, fromSource } = require('../src/recipes');
 
 const FIX = path.join(__dirname, 'fixtures', 'recettes');
 const read = f => fs.readFileSync(path.join(FIX, f), 'utf8');
@@ -117,4 +117,17 @@ test('slugify', () => {
   assert.equal(slugify('Gâteau aux amandes'), 'gateau-aux-amandes');
   assert.equal(slugify('Bœuf bourguignon'), 'boeuf-bourguignon');
   assert.equal(slugify('Pounti de Marie-Lé'), 'pounti-de-marie-le');
+});
+
+test.describe('Questions ouvertes (commentaires --)', () => {
+  test('relève le texte des commentaires du corps', () => {
+    assert.deepEqual(fromSource(read('Pounty.cook'), 'Pounty.cook', null).questions, ['point à vérifier avec Annie']);
+  });
+  test('ignore les délimiteurs --- et les recettes sans commentaire', () => {
+    assert.deepEqual(fromSource(read('Galette sèche.cook'), 'x.cook', null).questions, []);
+  });
+  test('commentaire en fin de ligne et bloc [- -]', () => {
+    const r = fromSource('---\ntitle: T\n---\n\nAjouter @sel{} -- combien ?\n\n[- olives illisibles -]\n', 'x.cook', null);
+    assert.deepEqual(r.questions, ['combien ?', 'olives illisibles']);
+  });
 });

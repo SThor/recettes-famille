@@ -56,8 +56,9 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
       <span>Photo ${yes(r.photo)}</span>
     </div>
     <form method="post" action="/admin/recettes/${r.slug}/verifie" class="verify">
-      <label><input type="checkbox" name="verifie" ${r.meta.verifie ? 'checked' : ''} onchange="this.form.submit()">
-        Vérifiée${r.meta.verifie ? ` <span class="muted small">(${esc(r.meta.verifie)})</span>` : ''}</label>
+      <label title="Relue et conforme à la recette d’origine, sans question en suspens"><input type="checkbox" name="verifie" ${r.meta.verifie ? 'checked' : ''} onchange="this.form.submit()">
+        Conforme à l’original${r.meta.verifie ? ` <span class="muted small">(${esc(r.meta.verifie)})</span>` : ''}</label>
+      ${r.questions.length ? `<span class="questions" title="${esc(r.questions.join(' · '))}">⚠ ${r.questions.length} question${r.questions.length > 1 ? 's' : ''} en suspens</span>` : ''}
       <noscript><button>OK</button></noscript>
     </form>
   </li>`).join('')}
@@ -103,7 +104,7 @@ const COOK_HELP = `<details class="help"><summary>Aide Cooklang</summary>
 
 // Éditeur en trois volets : original (fiche d'origine / proposition), formulaire, aperçu.
 // Ordre du DOM = ordre de lecture sur mobile ; les colonnes se forment selon la largeur (CSS).
-function editor({ theme, title, action, source, base, fichier, isNew, proposal, error, current, photo, originals = [], preview = '', verified = '' }) {
+function editor({ theme, title, action, source, base, fichier, isNew, proposal, error, current, photo, originals = [], preview = '', verified = '', questions = [] }) {
   const hasOriginal = originals.length > 0 || Boolean(proposal);
   const body = `
 <section class="admin editor">
@@ -135,8 +136,12 @@ function editor({ theme, title, action, source, base, fichier, isNew, proposal, 
         ${COOK_HELP}
         ${!proposal ? `<label>Photo du plat ${photo ? `<small>(remplace l'actuelle)</small>` : '<small>(facultatif)</small>'}<input type="file" name="photo_plat" accept="image/*"></label>
           ${photo ? `<img class="thumb" src="/photos/${enc(photo)}" alt="">` : ''}` : ''}
-        <label class="verify-box"><input type="checkbox" name="verifie" ${verified ? 'checked' : ''}>
-          <span>Vérifiée par rapport à l'original${verified ? ` <span class="muted small">(${esc(verified)})</span>` : ''}</span></label>
+        <div class="verify-box">
+          <label><input type="checkbox" name="verifie" ${verified ? 'checked' : ''}>
+            <span>Conforme à l’original${verified ? ` <span class="muted small">(${esc(verified)})</span>` : ''}</span></label>
+          <p class="muted small">À cocher une fois la recette relue face à l’original. Laisser décochée tant qu’il reste des questions (commentaires <code>--</code>).</p>
+          ${questions.length ? `<div class="questions">⚠ ${questions.length} question${questions.length > 1 ? 's' : ''} en suspens :<ul>${questions.map(q => `<li>${esc(q)}</li>`).join('')}</ul></div>` : ''}
+        </div>
         <div class="editor-actions">
           <button type="button" class="button secondary" id="preview-btn">Aperçu</button>
           <button class="button">${proposal ? 'Publier la recette' : 'Enregistrer'}</button>
