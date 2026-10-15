@@ -8,7 +8,7 @@ services:
       RECIPES_DIR: /recettes
       SUBMISSIONS_DIR: /data/a-moderer
     volumes:
-      - ./recettes:/recettes:ro
+      - ./recettes:/recettes
       - ./data:/data
     ports:
       - "127.0.0.1:8081:8081"

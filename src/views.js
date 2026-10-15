@@ -57,7 +57,7 @@ function home({ groups, theme }) {
   const body = `
 <section class="intro">
   <h1>Le livre de recettes de la famille</h1>
-  <p>Les recettes de Maman, de Grand-Maman et de toute la tribu.</p>
+  <p>Les recettes de Maman, de Grand-Maman et de la givellerie étendue.</p>
   <input type="search" id="search" placeholder="Chercher une recette, un ingrédient…" aria-label="Chercher" autocomplete="off">
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
@@ -91,7 +91,7 @@ function stepHtml(parts) {
   }).join('');
 }
 
-function recipe({ r, theme }) {
+function recipeArticle(r, { back = true } = {}) {
   const m = r.meta;
   const servings = Number(m.servings) || null;
   const facts = [
@@ -102,9 +102,9 @@ function recipe({ r, theme }) {
   ].filter(Boolean);
 
   let stepNo = 0;
-  const body = `
+  return `
 <article class="recipe" ${servings ? `data-servings="${servings}"` : ''}>
-  <a class="back" href="/#${esc(r.course || '')}">← Toutes les recettes</a>
+  ${back ? `<a class="back" href="/#${esc(r.course || '')}">← Toutes les recettes</a>` : ''}
   ${r.photo ? `<img class="hero" src="/photos/${enc(r.photo)}" alt="${esc(r.title)}">` : ''}
   <h1>${esc(r.title)}</h1>
   ${m.description ? `<p class="description">${esc(m.description)}</p>` : ''}
@@ -142,7 +142,10 @@ function recipe({ r, theme }) {
     ${r.originals.map(o => `<a href="/photos/${enc(o)}"><img src="/photos/${enc(o)}" alt="Fiche d'origine" loading="lazy"></a>`).join('')}
   </details>` : ''}
 </article>`;
-  return layout({ title: r.title, theme, body, bodyClass: 'page-recipe' });
+}
+
+function recipe({ r, theme }) {
+  return layout({ title: r.title, theme, body: recipeArticle(r), bodyClass: 'page-recipe' });
 }
 
 function proposeForm({ theme, error, values = {} }) {
@@ -201,22 +204,9 @@ function essais({ theme }) {
   return layout({ title: 'Styles', theme, body });
 }
 
-function moderation({ theme, submissions }) {
-  const body = `<section class="form-page">
-  <h1>À modérer (${submissions.length})</h1>
-  ${submissions.map(s => `<article class="submission">
-    <h2>${esc(s.titre)} <small>par ${esc(s.prenom)}, ${esc(s.date)}</small></h2>
-    <pre>${esc(s.texte)}</pre>
-    ${s.anecdote ? `<blockquote class="note">${esc(s.anecdote)}</blockquote>` : ''}
-    <p class="thumbs">${s.photos.map(p => `<a href="/moderation/fichiers/${enc(s.id)}/${enc(p)}"><img src="/moderation/fichiers/${enc(s.id)}/${enc(p)}" alt=""></a>`).join('')}</p>
-    <p><small>Dossier : ${esc(s.id)}</small></p>
-  </article>`).join('') || '<p>Rien pour le moment.</p>'}
-</section>`;
-  return layout({ title: 'Modération', theme, body });
-}
 
 function notFound({ theme }) {
   return layout({ title: 'Introuvable', theme, body: `<section class="form-page center"><h1>Recette introuvable</h1><p><a href="/">Retour aux recettes</a></p></section>` });
 }
 
-module.exports = { THEMES, home, recipe, proposeForm, thanks, login, essais, moderation, notFound };
+module.exports = { THEMES, esc, enc, layout, recipeArticle, home, recipe, proposeForm, thanks, login, essais, notFound };

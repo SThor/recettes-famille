@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const { createStore, slugify } = require('./recipes');
 const views = require('./views');
+const { createGit } = require('./git');
+const adminRouter = require('./admin');
 
 const {
   PORT = 8081,
@@ -16,6 +18,7 @@ const {
 } = process.env;
 
 const store = createStore(RECIPES_DIR);
+const git = createGit(RECIPES_DIR);
 const app = express();
 app.set('trust proxy', 'loopback');
 app.disable('x-powered-by');
@@ -61,28 +64,9 @@ app.get('/essais/:theme', (req, res) => {
   res.redirect(req.get('referer')?.includes('/recette/') ? req.get('referer') : '/');
 });
 
-// --- Modération (mot de passe admin, en Basic Auth) ---
-function admin(req, res, next) {
-  const [, b64 = ''] = (req.headers.authorization || '').split(' ');
-  const pass = Buffer.from(b64, 'base64').toString().split(':').slice(1).join(':');
-  if (ADMIN_PASSWORD && safeEqual(pass, ADMIN_PASSWORD)) return next();
-  res.set('WWW-Authenticate', 'Basic realm="moderation", charset="UTF-8"').status(401).send('Accès réservé.');
-}
-app.get('/moderation', admin, (req, res) => {
-  const ids = fs.existsSync(SUBMISSIONS_DIR) ? fs.readdirSync(SUBMISSIONS_DIR).sort().reverse() : [];
-  const submissions = ids.map(id => {
-    try {
-      const info = JSON.parse(fs.readFileSync(path.join(SUBMISSIONS_DIR, id, 'recette.json'), 'utf8'));
-      return { id, ...info };
-    } catch { return null; }
-  }).filter(Boolean);
-  res.send(views.moderation({ theme: req.theme, submissions }));
-});
-app.get('/moderation/fichiers/:id/:file', admin, (req, res) => {
-  const full = path.resolve(SUBMISSIONS_DIR, req.params.id, req.params.file);
-  if (!full.startsWith(path.resolve(SUBMISSIONS_DIR) + path.sep)) return res.sendStatus(404);
-  res.sendFile(full, err => err && !res.headersSent && res.sendStatus(404));
-});
+// --- Suivi / modération (mot de passe admin, en Basic Auth) ---
+app.use('/admin', adminRouter({ store, git, dataDir: path.dirname(SUBMISSIONS_DIR), adminPassword: ADMIN_PASSWORD, safeEqual }));
+app.get('/moderation', (req, res) => res.redirect('/admin'));
 
 // --- Tout le reste est réservé à la famille ---
 app.use((req, res, next) => (req.isFamily ? next() : res.redirect('/connexion')));
@@ -150,6 +134,13 @@ app.post('/proposer',
   }));
 
 app.use((req, res) => res.status(404).send(views.notFound({ theme: req.theme })));
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).send(views.layout({ title: 'Erreur', theme: req.theme, body: `<section class="form-page"><h1>Oups</h1><p class="error">${views.esc(err.message)}</p><p>Rien n'a été perdu : reviens en arrière pour réessayer.</p></section>` }));
+});
+
+git.init().catch(err => console.error('git :', err.message));
 
 app.listen(PORT, () => {
   console.log(`Recettes de famille sur http://localhost:${PORT} — ${store.all().length} recettes dans ${RECIPES_DIR}`);

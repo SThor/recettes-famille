@@ -22,6 +22,24 @@ function asList(v) {
   return Array.isArray(v) ? v.filter(Boolean) : [v];
 }
 
+// Construit l'objet recette à partir du source Cooklang (lève une erreur si l'en-tête YAML est invalide).
+function fromSource(src, file, dir) {
+  const base = file.replace(/\.cook$/, '');
+  const r = parse(src);
+  if (typeof r.meta !== 'object' || Array.isArray(r.meta)) throw new Error('En-tête YAML invalide');
+  const photo = dir ? PHOTO_EXT.map(e => base + e).find(p => fs.existsSync(path.join(dir, p))) : null;
+  return {
+    slug: slugify(base),
+    file,
+    title: r.meta.title || base,
+    course: String(r.meta.course || '').toLowerCase(),
+    photo: photo || null,
+    originals: asList(r.meta.original),
+    tags: asList(r.meta.tags),
+    ...r,
+  };
+}
+
 function createStore(dir) {
   let cache = null;
   let cachedAt = 0;
@@ -32,19 +50,7 @@ function createStore(dir) {
     const recipes = [];
     for (const file of files) {
       try {
-        const base = file.slice(0, -5);
-        const r = parse(fs.readFileSync(path.join(dir, file), 'utf8'));
-        const photo = PHOTO_EXT.map(e => base + e).find(p => fs.existsSync(path.join(dir, p)));
-        recipes.push({
-          slug: slugify(base),
-          file,
-          title: r.meta.title || base,
-          course: String(r.meta.course || '').toLowerCase(),
-          photo: photo || null,
-          originals: asList(r.meta.original),
-          tags: asList(r.meta.tags),
-          ...r,
-        });
+        recipes.push(fromSource(fs.readFileSync(path.join(dir, file), 'utf8'), file, dir));
       } catch (err) {
         console.error(`Recette illisible : ${file}`, err.message);
       }
@@ -56,8 +62,10 @@ function createStore(dir) {
   }
 
   return {
+    dir,
     all: load,
     get: slug => load().find(r => r.slug === slug),
+    invalidate() { cache = null; },
     grouped() {
       const recipes = load();
       const known = COURSES.map(([key, label]) => ({ key, label, recipes: recipes.filter(r => r.course === key) }));
@@ -75,4 +83,4 @@ function createStore(dir) {
   };
 }
 
-module.exports = { createStore, slugify };
+module.exports = { createStore, fromSource, slugify, PHOTO_EXT, COURSES };
