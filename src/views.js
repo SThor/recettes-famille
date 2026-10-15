@@ -65,7 +65,10 @@ function card(r) {
 </li>`;
 }
 
-function home({ groups, theme }) {
+function home({ groups, theme, tag = '' }) {
+  const count = groups.reduce((n, g) => n + g.recipes.length, 0);
+  const tagBanner = tag ? `<p class="tag-filter">Étiquette : <b>${esc(tag)}</b> · ${count} recette${count > 1 ? 's' : ''} <a href="/" aria-label="Voir toutes les recettes">✕</a></p>
+  ${count ? '' : '<p class="empty">Aucune recette avec cette étiquette.</p>'}` : '';
   const body = `
 <section class="intro">
   <h1>Le livre de recettes de la famille Givel</h1>
@@ -74,6 +77,7 @@ function home({ groups, theme }) {
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
   </nav>
+  ${tagBanner}
 </section>
 ${groups.map(g => `
 <section class="course" id="${g.key}">
@@ -168,7 +172,7 @@ function recipeArticle(r, { back = true } = {}) {
   ${r.photo ? `<img class="hero" src="/photos/${enc(r.photo)}" alt="${esc(r.title)}">` : ''}
   <h1>${esc(r.title)}</h1>
   ${m.description ? `<p class="description">${esc(m.description)}</p>` : ''}
-  ${r.tags.length ? `<p class="tags">${r.tags.map(t => `<span>${esc(t)}</span>`).join('')}</p>` : ''}
+  ${r.tags.length ? `<p class="tags">${r.tags.map(t => `<a class="tag" href="/?tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join('')}</p>` : ''}
   ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
   ${relatedHtml(r.related)}
 

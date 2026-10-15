@@ -74,6 +74,40 @@ test.describe('Site public (connecté)', () => {
     assert.doesNotMatch(html, /class="hero"/);
   });
 
+  test.describe('Étiquettes cliquables', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const cardsOf = html => [...html.matchAll(/<li class="card"[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort();
+
+    test('sur la page recette, chaque étiquette mène à l\'accueil filtré', async () => {
+      const html = await get('/recette/galette-seche');
+      assert.match(html, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois<\/a>/);
+      assert.match(await get('/recette/pounty'), /<a class="tag" href="\/\?tag=auvergne">auvergne<\/a>/);
+    });
+
+    test('l\'accueil ne garde que les recettes portant l\'étiquette', async () => {
+      const html = await get('/?tag=auvergne');
+      assert.deepEqual(cardsOf(html), ['pounty']);
+      assert.match(html, /<p class="tag-filter">Étiquette : <b>auvergne<\/b> · 1 recette <a href="\/" aria-label="Voir toutes les recettes">✕<\/a><\/p>/);
+    });
+
+    test('insensible à la casse et aux espaces', async () => {
+      assert.deepEqual(cardsOf(await get('/?tag=Galette%20des%20Rois')), ['galette-seche']);
+    });
+
+    test('étiquette inconnue : aucune recette et un lien pour revenir', async () => {
+      const html = await get('/?tag=introuvable');
+      assert.deepEqual(cardsOf(html), []);
+      assert.match(html, /Étiquette : <b>introuvable<\/b> · 0 recette/);
+      assert.match(html, /Aucune recette avec cette étiquette\./);
+    });
+
+    test('sans filtre : toutes les recettes, pas de bandeau', async () => {
+      const html = await get('/');
+      assert.deepEqual(cardsOf(html), ['galette-seche', 'pounty']);
+      assert.doesNotMatch(html, /class="tag-filter"/);
+    });
+  });
+
   test.describe('Liens entre recettes', () => {
     const write = (file, meta, body = 'Mélanger.') => fs.writeFileSync(path.join(t.recipesDir, file), `---\n${meta}\n---\n\n${body}\n`);
     const page = async slug => (await t.req(`/recette/${slug}`, { headers: { cookie } })).text();

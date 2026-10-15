@@ -120,8 +120,8 @@ function createStore(dir) {
     all: load,
     get: slug => load().find(r => r.slug === slug),
     invalidate() { cache = null; },
-    grouped() {
-      const recipes = load();
+    grouped(keep = () => true) {
+      const recipes = load().filter(keep);
       const known = COURSES.map(([key, label]) => ({ key, label, recipes: recipes.filter(r => r.course === key) }));
       const others = recipes.filter(r => !COURSES.some(([k]) => k === r.course));
       if (others.length) known.push({ key: 'autre', label: 'Et aussi', recipes: others });

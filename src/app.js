@@ -82,7 +82,13 @@ function createApp({
   // --- Tout le reste est réservé à la famille ---
   app.use((req, res, next) => (req.isFamily ? next() : res.redirect('/connexion')));
 
-  app.get('/', (req, res) => res.send(views.home({ groups: store.grouped(), theme: req.theme })));
+  // Accueil, éventuellement filtré sur une étiquette (?tag=…, comparaison sans casse ni espaces superflus).
+  app.get('/', (req, res) => {
+    const norm = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+    const tag = typeof req.query.tag === 'string' ? req.query.tag.trim() : '';
+    const groups = tag ? store.grouped(r => r.tags.some(x => norm(x) === norm(tag))) : store.grouped();
+    res.send(views.home({ groups, theme: req.theme, tag }));
+  });
 
   app.get('/recette/:slug', (req, res) => {
     const r = store.get(req.params.slug);
