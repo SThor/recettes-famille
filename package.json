@@ -1,0 +1,18 @@
+{
+  "name": "recettes-famille",
+  "version": "1.0.0",
+  "description": "Livre de recettes de la famille (web app)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.22.3",
+    "multer": "^2.4.0",
+    "yaml": "^2.9.1"
+  }
+}

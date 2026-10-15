@@ -1,0 +1,87 @@
+/* Nappe vichy : rustique, carreaux rouges, papier crème et bois */
+.theme-vichy {
+  --bg: #f3ead9;
+  --surface: #fffbf2;
+  --text: #3b2a20;
+  --muted: #7a6656;
+  --accent: #b3352f;
+  --accent-soft: #f6e0d6;
+  --wood: #8a5a3c;
+  --border: #e0cfb4;
+  --radius: 4px;
+  --font: "Lora", Georgia, serif;
+  --font-title: "Lora", Georgia, serif;
+  --shadow: 2px 3px 0 rgb(90 60 40 / .12);
+  /* Motif vichy : deux bandes croisées semi-transparentes */
+  --gingham:
+    linear-gradient(90deg, rgb(179 53 47 / .55) 50%, transparent 0) 0 0 / 22px 22px,
+    linear-gradient(rgb(179 53 47 / .55) 50%, transparent 0) 0 0 / 22px 22px,
+    #fff;
+  --gingham-small:
+    linear-gradient(90deg, rgb(179 53 47 / .55) 50%, transparent 0) 0 0 / 12px 12px,
+    linear-gradient(rgb(179 53 47 / .55) 50%, transparent 0) 0 0 / 12px 12px,
+    #fff;
+}
+/* Léger grain de papier */
+.theme-vichy {
+  background-image: radial-gradient(rgb(120 90 60 / .06) 1px, transparent 1px);
+  background-size: 5px 5px;
+}
+
+.theme-vichy .site-header { background: var(--surface); border-bottom: 0; padding-bottom: 20px; }
+.theme-vichy .site-header::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 10px;
+  background: var(--gingham-small);
+}
+.theme-vichy .brand { font-family: "Caveat", cursive; font-size: 1.7rem; color: var(--accent); }
+.theme-vichy .header-action { background: transparent; border: 1.5px dashed var(--accent); }
+
+.theme-vichy .intro { text-align: center; padding-top: 12px; }
+.theme-vichy .intro h1 { font-family: "Caveat", cursive; font-size: 2.6rem; color: var(--wood); margin-bottom: 0; }
+.theme-vichy .chips { justify-content: flex-start; }
+.theme-vichy .chip { border-radius: var(--radius); border: 1.5px solid var(--wood); color: var(--wood); background: var(--surface); }
+.theme-vichy #search { border: 1.5px solid var(--border); }
+
+.theme-vichy .course h2 {
+  font-family: "Caveat", cursive; font-size: 2rem; color: var(--accent);
+  display: flex; align-items: center; gap: 12px;
+}
+.theme-vichy .course h2::after { content: ""; flex: 1; height: 8px; background: var(--gingham-small); opacity: .7; border-radius: 2px; }
+
+/* Fiches façon carte de recette, coin vichy */
+.theme-vichy .card a { position: relative; border: 1px solid var(--border); padding-left: 26px; }
+.theme-vichy .card a::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px;
+  background: var(--gingham-small); border-radius: var(--radius) 0 0 var(--radius);
+}
+.theme-vichy .card img { margin-left: -26px; width: calc(100% + 42px); }
+
+/* Page recette : bandeau vichy derrière le titre */
+.theme-vichy .recipe > h1 {
+  font-family: "Caveat", cursive; font-size: 2.5rem; color: var(--text);
+  background: var(--surface); padding: 6px 14px; margin: 12px 0; text-align: center;
+  border: 1px solid var(--border); box-shadow: 0 0 0 8px var(--surface);
+  position: relative;
+}
+.theme-vichy .recipe { position: relative; }
+.theme-vichy .recipe::before {
+  content: ""; display: block; height: 18px; margin: 0 -16px; background: var(--gingham);
+}
+.theme-vichy .hero { margin-top: 0; border-bottom: 4px solid var(--accent); }
+.theme-vichy .back { margin-top: 10px; }
+
+.theme-vichy .ingredients h2, .theme-vichy .steps h2 { font-family: "Caveat", cursive; font-size: 1.9rem; color: var(--accent); margin-bottom: .3em; }
+.theme-vichy .ingredients ul { box-shadow: var(--shadow); }
+.theme-vichy .ingredients li + li { border-top: 1px dashed var(--border); }
+.theme-vichy .step-no { border-radius: 2px; font-family: "Caveat", cursive; font-size: 1.2rem; }
+.theme-vichy .note {
+  background: var(--surface); border-left: 0; border-radius: var(--radius);
+  font-family: "Caveat", cursive; font-size: 1.35rem; font-style: normal; color: var(--wood);
+  box-shadow: var(--shadow); border: 1px solid var(--border); transform: rotate(-.6deg);
+}
+.theme-vichy .facts div { border-style: dashed; }
+.theme-vichy .tags span { border-radius: 2px; }
+.theme-vichy .button { border-radius: var(--radius); box-shadow: var(--shadow); }
+
+.theme-vichy .site-footer { border-top: 0; position: relative; padding-top: 34px; }
+.theme-vichy .site-footer::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: var(--gingham); }

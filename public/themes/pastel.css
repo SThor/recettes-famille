@@ -1,0 +1,66 @@
+/* Pastel douillet : vert sauge, rose poudré, beige crème */
+.theme-pastel {
+  --bg: #f7f1e8;
+  --surface: #fffaf3;
+  --text: #4a4039;
+  --muted: #8d8077;
+  --accent: #7d9a7e;
+  --accent-soft: #e6eedf;
+  --rose: #ecc5c0;
+  --rose-soft: #f8e6e2;
+  --border: #eadfd2;
+  --radius: 18px;
+  --font: "Nunito", system-ui, sans-serif;
+  --font-title: "Fraunces", Georgia, serif;
+  --shadow: 0 6px 18px -10px rgb(122 96 80 / .35);
+}
+.theme-pastel h1, .theme-pastel h2 { font-weight: 700; color: #5b4a40; }
+
+.theme-pastel .site-header {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 0;
+  box-shadow: 0 1px 0 var(--border);
+}
+.theme-pastel .header-action { background: var(--rose-soft); color: #a8645c; }
+
+/* Bandeau d'accueil doux, avec des pois rose et vert */
+.theme-pastel .intro {
+  margin: 16px -16px 8px;
+  padding: 24px 16px 18px;
+  background:
+    radial-gradient(circle at 12px 12px, var(--rose) 3px, transparent 3.5px) 0 0 / 34px 34px,
+    radial-gradient(circle at 12px 12px, #cfdcc9 3px, transparent 3.5px) 17px 17px / 34px 34px,
+    var(--rose-soft);
+  border-radius: 0 0 28px 28px;
+}
+.theme-pastel .intro h1, .theme-pastel .intro p {
+  background: var(--surface); display: inline-block; padding: 4px 12px; border-radius: 12px;
+}
+.theme-pastel .intro p { display: table; margin-top: 6px; }
+.theme-pastel #search { border-radius: 999px; padding-left: 18px; box-shadow: var(--shadow); }
+.theme-pastel .chip { background: var(--accent-soft); border-color: transparent; color: #4f6b50; font-weight: 600; }
+.theme-pastel .course:nth-of-type(even) .chip { background: var(--rose-soft); }
+
+.theme-pastel .course h2::after {
+  content: ""; display: block; width: 48px; height: 4px; margin-top: 6px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--rose), var(--accent));
+}
+.theme-pastel .card a { border: 0; }
+.theme-pastel .card:nth-child(3n+2) a { background: #fdf3ef; }
+.theme-pastel .card:nth-child(3n) a { background: #f3f6ee; }
+
+.theme-pastel .facts div { border: 0; background: var(--accent-soft); }
+.theme-pastel .facts div:nth-child(even) { background: var(--rose-soft); }
+.theme-pastel .ingredients ul { border: 0; box-shadow: var(--shadow); }
+.theme-pastel .step-no { background: var(--rose); color: #6d4741; }
+.theme-pastel .note { background: var(--rose-soft); border-left-color: var(--rose); border-radius: 0 18px 18px 0; }
+.theme-pastel .hero { border-radius: 0 0 28px 28px; }
+.theme-pastel .tags span { background: var(--rose-soft); color: #a8645c; }
+.theme-pastel .button { background: var(--accent); }
+.theme-pastel .site-footer { border-top: 0; }
+
+@media (min-width: 760px) {
+  .theme-pastel .intro { margin: 16px 0 8px; border-radius: 28px; }
+  .theme-pastel .hero { width: 100%; margin: 8px 0 0; border-radius: 28px; }
+}

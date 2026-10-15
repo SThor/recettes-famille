@@ -1,0 +1,15 @@
+services:
+  recettes:
+    build: .
+    container_name: recettes-famille
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RECIPES_DIR: /recettes
+      SUBMISSIONS_DIR: /data/a-moderer
+    volumes:
+      - ./recettes:/recettes:ro
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8081:8081"
+    mem_limit: 128m
