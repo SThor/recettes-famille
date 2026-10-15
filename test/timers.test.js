@@ -27,6 +27,20 @@ test.describe('Durées → secondes', () => {
   });
 });
 
+test.describe('Durées écrites en toutes lettres → minutes (en-tête des recettes)', () => {
+  const { toMinutes } = require('../src/durations');
+  const cases = [
+    ['20 minutes', 20], ['45 min', 45], ['1 heure', 60], ['3 heures', 180], ['2 h', 120],
+    ['1 h 30', 90], ['1h30', 90], ['2 heures 15', 135], ['1 heure et demie', 90], ['1/2 heure', 30],
+    ['25 à 30 minutes', 30], ['10-15 min', 15], ['1 heure (une petite heure)', 60], ['30 secondes', 1], [15, 15],
+  ];
+  for (const [text, min] of cases) test(`« ${text} » → ${min} min`, () => assert.equal(toMinutes(text), min));
+
+  test('illisible ou vide → null', () => {
+    for (const text of ['', null, undefined, 'une nuit', 'quelques instants']) assert.equal(toMinutes(text), null);
+  });
+});
+
 test.describe('Rendu des minuteurs', () => {
   const html = src => recipeArticle(fromSource(`---\ntitle: T\n---\n\n${src}\n`, 'T.cook', null), { back: false });
 

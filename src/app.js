@@ -84,13 +84,24 @@ function createApp({
 
   // Accueil, éventuellement filtré sur une étiquette (?tag=…) et/ou un régime (?regime=…),
   // comparaisons sans casse ni espaces superflus.
+  // + durée maximum (?duree=minutes), sur le temps total ou sur la préparation seule (?temps=prep).
   app.get('/', (req, res) => {
     const param = name => (typeof req.query[name] === 'string' ? req.query[name].trim() : '');
     const tag = param('tag');
     const regime = param('regime');
+    const duree = /^\d{1,4}$/.test(param('duree')) && Number(param('duree')) > 0 ? Number(param('duree')) : null;
+    const temps = param('temps') === 'prep' ? 'prep' : 'total';
     const has = (values, wanted) => values.some(x => normValue(x) === normValue(wanted));
-    const groups = store.grouped(r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime)));
-    res.send(views.home({ groups, theme: req.theme, tag, regime, tags: store.tags(), diets: store.diets() }));
+    const base = r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime));
+    const minutes = r => (temps === 'prep' ? r.durations.prep : r.durations.total);
+    // Les recettes hors durée restent dans la page, masquées : le curseur peut les réafficher en direct.
+    const groups = store.grouped(base);
+    const fits = r => !duree || (minutes(r) != null && minutes(r) <= duree);
+    // Recettes écartées faute de durée renseignée (signalées sous le bandeau).
+    const unknown = duree ? store.all().filter(r => base(r) && minutes(r) == null).length : 0;
+    // Paramètres de filtre actuels, dans l'ordre de l'URL (pour construire les liens).
+    const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
+    res.send(views.home({ groups, fits, theme: req.theme, tag, regime, duree, temps, unknown, params, tags: store.tags(), diets: store.diets() }));
   });
 
   app.get('/recette/:slug', (req, res) => {

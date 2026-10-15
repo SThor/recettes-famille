@@ -76,7 +76,7 @@ test.describe('Site public (connecté)', () => {
 
   test.describe('Étiquettes cliquables', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
-    const cardsOf = html => [...html.matchAll(/<li class="card"[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort();
+    const cardsOf = html => [...html.matchAll(/<li class="card"(?![^>]*\bhidden\b)[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort(); // cartes visibles
 
     test('sur la page recette, chaque étiquette mène à l\'accueil filtré', async () => {
       const html = await get('/recette/galette-seche');
@@ -87,7 +87,7 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes portant l\'étiquette', async () => {
       const html = await get('/?tag=auvergne');
       assert.deepEqual(cardsOf(html), ['pounty']);
-      assert.match(html, /<p class="tag-filter">Étiquette : <b>auvergne<\/b> · 1 recette <a href="\/" aria-label="Voir toutes les recettes">✕<\/a><\/p>/);
+      assert.match(html, /<p class="tag-filter"><span class="active-filter">Étiquette : <b>auvergne<\/b> <a href="\/" aria-label="Retirer ce filtre">✕<\/a><\/span> · 1 recette<\/p>/);
     });
 
     test('insensible à la casse et aux espaces', async () => {
@@ -97,7 +97,7 @@ test.describe('Site public (connecté)', () => {
     test('étiquette inconnue : aucune recette et un lien pour revenir', async () => {
       const html = await get('/?tag=introuvable');
       assert.deepEqual(cardsOf(html), []);
-      assert.match(html, /Étiquette : <b>introuvable<\/b> · 0 recette/);
+      assert.match(html, /Étiquette : <b>introuvable<\/b> <a href="\/" aria-label="Retirer ce filtre">✕<\/a><\/span> · 0 recette/);
       assert.match(html, /Aucune recette avec cette étiquette\./);
     });
 
@@ -110,7 +110,7 @@ test.describe('Site public (connecté)', () => {
 
   test.describe('Filtre par régime', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
-    const cardsOf = html => [...html.matchAll(/<li class="card"[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort();
+    const cardsOf = html => [...html.matchAll(/<li class="card"(?![^>]*\bhidden\b)[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort(); // cartes visibles
     const setMeta = (file, line) => fs.writeFileSync(path.join(t.recipesDir, file), t.read(file).replace(/^title: .*$/m, m => `${m}\n${line}`));
 
     test.beforeEach(() => {
@@ -131,14 +131,15 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes du régime, sans tenir compte des majuscules', async () => {
       const html = await get('/?regime=V%C3%A9g%C3%A9tarien');
       assert.deepEqual(cardsOf(html), ['galette-seche', 'salade']);
-      assert.match(html, /<p class="tag-filter">Régime : <b>Végétarien<\/b> · 2 recettes <a href="\/" aria-label="Voir toutes les recettes">✕<\/a><\/p>/);
+      assert.match(html, /<p class="tag-filter"><span class="active-filter">Régime : <b>Végétarien<\/b> <a href="\/" aria-label="Retirer ce filtre">✕<\/a><\/span> · 2 recettes<\/p>/);
     });
 
     test('régime et étiquette se combinent', async () => {
       const html = await get('/?regime=v%C3%A9g%C3%A9tarien&tag=pique-nique');
       assert.deepEqual(cardsOf(html), ['salade']);
-      assert.match(html, /Régime : <b>végétarien<\/b>/);
-      assert.match(html, /Étiquette : <b>pique-nique<\/b>/);
+      assert.match(html, /Régime : <b>végétarien<\/b> <a href="\/\?tag=pique-nique" aria-label="Retirer ce filtre">✕<\/a>/);
+      assert.match(html, /Étiquette : <b>pique-nique<\/b> <a href="\/\?regime=v%C3%A9g%C3%A9tarien" aria-label="Retirer ce filtre">✕<\/a>/);
+      assert.match(html, /<a class="clear-filters" href="\/">Tout effacer<\/a>/);
     });
 
     test('sur la page recette, chaque régime est un lien', async () => {
@@ -151,6 +152,78 @@ test.describe('Site public (connecté)', () => {
         fs.writeFileSync(path.join(t.recipesDir, f), t.read(f).replace(/^diet:.*\n/m, ''));
       }
       assert.doesNotMatch(await get('/'), /class="diets"/);
+    });
+  });
+
+  test.describe('Filtre par durée', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const cardsOf = html => [...html.matchAll(/<li class="card"(?![^>]*\bhidden\b)[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort(); // cartes visibles
+    const setMeta = (file, lines) => fs.writeFileSync(path.join(t.recipesDir, file), t.read(file).replace(/^title: .*$/m, m => `${m}\n${lines}`));
+
+    test.beforeEach(() => {
+      setMeta('Pounty.cook', 'prep time: 20 minutes\ncook time: 45 minutes');      // préparation 20, total 65
+      setMeta('Galette sèche.cook', 'prep time: 10 minutes\nrest time: 1 heure');    // préparation 10, total 70
+      fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\ntime: 15 minutes\n---\n\nMélanger.\n'); // total 15
+      fs.writeFileSync(path.join(t.recipesDir, 'Mystère.cook'), '---\ntitle: Mystère\n---\n\nMélanger.\n');                // aucune durée
+    });
+
+    test('chaque carte porte ses durées en minutes', async () => {
+      const html = await get('/');
+      assert.match(html, /<li class="card" data-search="[^"]*" data-prep="20" data-total="65">\s*<a href="\/recette\/pounty"/);
+      assert.match(html, /<li class="card" data-search="[^"]*" data-prep="" data-total="15">\s*<a href="\/recette\/salade"/);
+      assert.match(html, /<li class="card" data-search="[^"]*" data-prep="" data-total="">\s*<a href="\/recette\/mystere"/);
+    });
+
+    test('durée max sur le temps total', async () => {
+      const html = await get('/?duree=30');
+      assert.deepEqual(cardsOf(html), ['salade']);
+      assert.match(html, /Durée : <b>30 min max<\/b> \(temps total\)/);
+      assert.match(html, /1 recette sans durée n’est pas comptée\./);
+    });
+
+    test('durée max sur la préparation seulement', async () => {
+      const html = await get('/?duree=30&temps=prep');
+      assert.deepEqual(cardsOf(html), ['galette-seche', 'pounty']);
+      assert.match(html, /Durée : <b>30 min max<\/b> \(préparation\)/);
+      assert.match(html, /2 recettes sans durée de préparation ne sont pas comptées\./);
+    });
+
+    test('les recettes trop longues restent dans la page, masquées (pour l\'aperçu en direct)', async () => {
+      const html = await get('/?duree=30');
+      assert.match(html, /<li class="card" hidden data-search="[^"]*" data-prep="20" data-total="65">\s*<a href="\/recette\/pounty"/);
+      assert.match(html, /<span id="filters-count">1 recette<\/span>/);
+    });
+
+    test('les durées en heures s\'affichent en heures', async () => {
+      assert.match(await get('/?duree=90'), /Durée : <b>1 h 30 max<\/b>/);
+    });
+
+    test('valeur absurde : filtre ignoré', async () => {
+      assert.equal(cardsOf(await get('/?duree=abc')).length, 4);
+    });
+  });
+
+  test.describe('Panneau de filtres', () => {
+    const get = async url => (await t.req(url, { headers: { cookie } })).text();
+    const panelOf = html => html.slice(html.indexOf('<aside class="filters-panel"'), html.indexOf('</aside>'));
+
+    test('régimes, durée et étiquettes sont dans le panneau', async () => {
+      const panel = panelOf(await get('/'));
+      assert.match(panel, /^<aside class="filters-panel" id="filtres" aria-label="Filtres">/);
+      assert.match(panel, /<details class="tag-cloud"/);
+      assert.match(panel, /<input type="range" id="duree-range"/);
+      assert.match(panel, /<input type="checkbox" id="duree-prep"/);
+      for (const m of [15, 30, 60, 120]) assert.match(panel, new RegExp(`<a class="duree-preset" data-minutes="${m}" href="/\\?duree=${m}">`));
+    });
+
+    test('les raccourcis de durée gardent les autres filtres', async () => {
+      const panel = panelOf(await get('/?tag=auvergne&temps=prep'));
+      assert.match(panel, /href="\/\?tag=auvergne&amp;temps=prep&amp;duree=30"/);
+    });
+
+    test('bouton « Filtres » pour mobile, avec le nombre de filtres actifs', async () => {
+      assert.match(await get('/'), /<button type="button" class="filters-toggle" aria-controls="filtres" aria-expanded="false">Filtres<\/button>/);
+      assert.match(await get('/?tag=auvergne&duree=30'), /<button type="button" class="filters-toggle"[^>]*>Filtres <span class="count">2<\/span><\/button>/);
     });
   });
 

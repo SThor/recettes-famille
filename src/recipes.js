@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parse } = require('./cooklang');
+const { toMinutes } = require('./durations');
 
 const PHOTO_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const COURSES = [
@@ -35,6 +36,15 @@ function openQuestions(src) {
   return questions.sort((a, b) => body.indexOf(a) - body.indexOf(b));
 }
 
+// Durées en minutes pour le filtre : préparation, et total = `time` s'il est donné,
+// sinon la somme de ce qui est connu parmi préparation, cuisson et repos (null si rien).
+function durationsOf(meta) {
+  const prep = toMinutes(meta['prep time']);
+  const parts = [prep, toMinutes(meta['cook time']), toMinutes(meta['rest time'])].filter(x => x != null);
+  const total = toMinutes(meta.time) ?? (parts.length ? parts.reduce((a, b) => a + b, 0) : null);
+  return { prep, total };
+}
+
 // Construit l'objet recette à partir du source Cooklang (lève une erreur si l'en-tête YAML est invalide).
 function fromSource(src, file, dir) {
   const base = file.replace(/\.cook$/, '');
@@ -55,6 +65,7 @@ function fromSource(src, file, dir) {
     tags: asList(r.meta.tags),
     questions: openQuestions(src),
     stepPhotos,
+    durations: durationsOf(r.meta),
     ...r,
   };
 }

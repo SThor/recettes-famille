@@ -1,23 +1,84 @@
-// Recherche sur l'accueil
-const search = document.getElementById('search');
-if (search) {
+// Accueil : recherche par mot + durée max (curseur), appliquées ensemble aux cartes.
+// Les filtres régime / étiquette sont faits par le serveur (liens) ; la durée est prévisualisée
+// en direct ici, puis validée dans l'URL (au relâchement du curseur sur grand écran,
+// avec « Voir N recettes » dans le tiroir sur mobile).
+(() => {
+  const cards = [...document.querySelectorAll('.home-results .card')];
+  if (!cards.length && !document.getElementById('filtres')) return;
+  const search = document.getElementById('search');
+  const panel = document.getElementById('filtres');
+  const range = document.getElementById('duree-range');
+  const label = document.getElementById('duree-label');
+  const prep = document.getElementById('duree-prep');
+  const countEl = document.getElementById('filters-count');
   const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  search.addEventListener('input', () => {
-    const q = norm(search.value.trim());
-    let any = false;
-    document.querySelectorAll('.course').forEach(section => {
+  const stops = range ? range.dataset.stops.split(',').map(Number) : [];
+  const fmt = m => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''}`);
+  // Durée affichée par le serveur (peut ne pas tomber sur un cran, ex. ?duree=35) : gardée tant qu'on ne touche pas au curseur.
+  const params = new URLSearchParams(location.search);
+  let maxDuree = Number(params.get('duree')) || null;
+
+  function apply() {
+    const q = search ? norm(search.value.trim()) : '';
+    const field = prep?.checked ? 'prep' : 'total';
+    let shown = 0;
+    document.querySelectorAll('.home-results .course').forEach(section => {
       let visible = 0;
       section.querySelectorAll('.card').forEach(card => {
-        const show = !q || norm(card.dataset.search).includes(q);
-        card.hidden = !show;
-        if (show) visible++;
+        const minutes = card.dataset[field] === '' ? null : Number(card.dataset[field]);
+        const okDuree = !maxDuree || (minutes != null && minutes <= maxDuree);
+        const okSearch = !q || norm(card.dataset.search).includes(q);
+        card.hidden = !(okDuree && okSearch);
+        if (!card.hidden) visible++;
       });
       section.hidden = visible === 0;
-      any ||= visible > 0;
+      shown += visible;
     });
-    document.getElementById('no-result').hidden = any;
+    const none = document.getElementById('no-result');
+    if (none) none.hidden = shown > 0 || !q;
+    if (countEl) countEl.textContent = `${shown} recette${shown > 1 ? 's' : ''}`;
+  }
+
+  search?.addEventListener('input', apply);
+  if (!panel || !range) return;
+
+  // URL correspondant à l'état du curseur et de la case (les autres filtres sont conservés).
+  function targetUrl() {
+    const p = new URLSearchParams(location.search);
+    if (maxDuree) p.set('duree', maxDuree); else p.delete('duree');
+    if (maxDuree && prep.checked) p.set('temps', 'prep'); else p.delete('temps');
+    const qs = p.toString().replace(/\+/g, '%20');
+    return `/${qs ? `?${qs}` : ''}`;
+  }
+  const commit = () => { const url = targetUrl(); if (url !== location.pathname + location.search) location.href = url; };
+  const desktop = window.matchMedia('(min-width: 1000px)');
+
+  range.addEventListener('input', () => {
+    const i = Number(range.value);
+    maxDuree = i >= stops.length ? null : stops[i];
+    label.textContent = maxDuree ? fmt(maxDuree) : 'sans limite';
+    apply();
   });
-}
+  range.addEventListener('change', () => { if (desktop.matches) commit(); });
+  prep.addEventListener('change', () => { apply(); if (desktop.matches && maxDuree) commit(); });
+
+  // Tiroir des filtres (mobile)
+  document.documentElement.classList.add('js-filters');
+  const toggle = document.querySelector('.filters-toggle');
+  const setOpen = on => {
+    document.body.classList.toggle('filters-open', on);
+    toggle.setAttribute('aria-expanded', String(on));
+  };
+  toggle.addEventListener('click', e => { e.stopPropagation(); setOpen(!document.body.classList.contains('filters-open')); });
+  panel.querySelector('.filters-apply').addEventListener('click', () => {
+    const url = targetUrl();
+    if (url !== location.pathname + location.search) location.href = url; else setOpen(false);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+  document.addEventListener('click', e => {
+    if (document.body.classList.contains('filters-open') && !panel.contains(e.target)) setOpen(false);
+  });
+})();
 
 // Portions : recalcule les quantités
 const recipe = document.querySelector('.recipe[data-servings]');

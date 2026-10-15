@@ -1,5 +1,5 @@
 const { slugify } = require('./recipes');
-const { toSeconds } = require('./durations');
+const { toSeconds, formatMinutes } = require('./durations');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
 const ASSET_V = Date.now().toString(36);
 
@@ -54,9 +54,10 @@ ${body}
 </html>`;
 }
 
-function card(r) {
+function card(r, visible = true) {
   const search = [r.title, ...r.ingredients.map(i => i.name), ...r.tags].join(' ').toLowerCase();
-  return `<li class="card" data-search="${esc(search)}">
+  const d = r.durations || {};
+  return `<li class="card"${visible ? '' : ' hidden'} data-search="${esc(search)}" data-prep="${d.prep ?? ''}" data-total="${d.total ?? ''}">
   <a href="/recette/${r.slug}">
     ${r.photo ? `<img src="/photos/${enc(r.photo)}" alt="" loading="lazy">` : ''}
     <span class="card-title">${esc(r.title)}</span>
@@ -68,17 +69,52 @@ function card(r) {
 // JSON sûr dans un <script> (pas de « </script> » ni de « <!-- » possibles).
 const jsonForScript = data => JSON.stringify(data).replace(/</g, '\\u003c');
 
-function home({ groups, theme, tag = '', regime = '', tags = [], diets = [] }) {
-  const dietRow = diets.length ? `<p class="diets">Régimes : ${diets.map(d => `<a class="diet" href="/?regime=${encodeURIComponent(d.name)}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
+// Crans du curseur de durée (minutes) ; le dernier cran = sans limite. Partagés avec public/app.js.
+const DUREE_STOPS = [5, 10, 15, 20, 25, 30, 40, 45, 50, 60, 75, 90, 120, 150, 180, 240];
+const DUREE_PRESETS = [15, 30, 60, 120];
+
+// URL de l'accueil à partir des filtres actuels (dans l'ordre de l'URL), avec des modifications :
+// valeur = remplacer/ajouter, null = retirer.
+function homeUrl(params, changes = {}) {
+  const entries = params.filter(([k]) => !(k in changes));
+  for (const [k, v] of Object.entries(changes)) if (v != null) entries.push([k, String(v)]);
+  // Garder l'ordre d'origine pour les clés modifiées qui existaient déjà.
+  const order = params.map(([k]) => k);
+  entries.sort((a, b) => (order.includes(a[0]) ? order.indexOf(a[0]) : 99) - (order.includes(b[0]) ? order.indexOf(b[0]) : 99));
+  return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
+}
+
+function home({ groups, fits = () => true, theme, tag = '', regime = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [] }) {
+  const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
+  const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
+
+  // Filtres actifs : une ✕ par filtre (retire ce filtre seulement), « Tout effacer » s'il y en a plusieurs.
+  const active = [
+    regime && [`Régime : <b>${esc(regime)}</b>`, { regime: null }],
+    tag && [`Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
+    duree && [`Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
+  ].filter(Boolean);
+  const banner = active.length ? `<p class="tag-filter">${active.map(([label, remove]) =>
+    `<span class="active-filter">${label} <a href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">✕</a></span>`).join(' · ')} · ${recettes(count)}${active.length > 1 ? ' <a class="clear-filters" href="/">Tout effacer</a>' : ''}</p>
+  ${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
+  ${count ? '' : `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>`}` : '';
+
+  const dietRow = diets.length ? `<p class="diets">Régimes : ${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join(' · ')}</p>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud">
     <summary>Étiquettes <span class="count">${tags.length}</span></summary>
-    <div class="tags">${tags.map(x => `<a class="tag" href="/?tag=${encodeURIComponent(x.name)}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
+    <div class="tags">${tags.map(x => `<a class="tag" href="${esc(homeUrl(params, { tag: x.name }))}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
-  const count = groups.reduce((n, g) => n + g.recipes.length, 0);
-  // Bandeau des filtres actifs (régime, étiquette) ; la croix les retire tous.
-  const active = [regime && `Régime : <b>${esc(regime)}</b>`, tag && `Étiquette : <b>${esc(tag)}</b>`].filter(Boolean);
-  const tagBanner = active.length ? `<p class="tag-filter">${active.join(' · ')} · ${count} recette${count > 1 ? 's' : ''} <a href="/" aria-label="Voir toutes les recettes">✕</a></p>
-  ${count ? '' : `<p class="empty">${tag && !regime ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>`}` : '';
+
+  // Curseur : position = premier cran ≥ durée demandée ; sans durée = dernier cran (sans limite).
+  const found = duree ? DUREE_STOPS.findIndex(s => s >= duree) : -1;
+  const stopIndex = found === -1 ? DUREE_STOPS.length : found;
+  const dureeBlock = `<div class="duree">
+    <label for="duree-range">Durée max : <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
+    <input type="range" id="duree-range" min="0" max="${DUREE_STOPS.length}" step="1" value="${stopIndex}" data-stops="${DUREE_STOPS.join(',')}">
+    <div class="duree-presets">${DUREE_PRESETS.map(m => `<a class="duree-preset" data-minutes="${m}" href="${esc(homeUrl(params, { duree: m }))}">${formatMinutes(m)}</a>`).join('')}</div>
+    <label class="duree-prep"><input type="checkbox" id="duree-prep" ${temps === 'prep' ? 'checked' : ''}> Préparation seulement</label>
+  </div>`;
+
   const body = `
 <section class="intro">
   <h1>Le livre de recettes de la famille Givel</h1>
@@ -91,17 +127,27 @@ function home({ groups, theme, tag = '', regime = '', tags = [], diets = [] }) {
   <nav class="chips">
     ${groups.map(g => `<a class="chip" href="#${g.key}">${esc(g.label)}</a>`).join('')}
   </nav>
-  ${dietRow}
-  ${tagBanner}
-  ${tagCloud}
 </section>
-${groups.map(g => `
-<section class="course" id="${g.key}">
-  <h2>${esc(g.label)}</h2>
-  <ul class="cards">${g.recipes.map(card).join('')}</ul>
-</section>`).join('')}
-<p class="empty" id="no-result" hidden>Aucune recette ne correspond… <a href="/proposer">En proposer une ?</a></p>`;
-  return layout({ title: 'Accueil', theme, body });
+<button type="button" class="filters-toggle" aria-controls="filtres" aria-expanded="false">Filtres${active.length ? ` <span class="count">${active.length}</span>` : ''}</button>
+<div class="home-layout">
+<aside class="filters-panel" id="filtres" aria-label="Filtres">
+  <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}</div>
+  ${dietRow}
+  ${dureeBlock}
+  ${tagCloud}
+  <button type="button" class="button filters-apply">Voir <span id="filters-count">${recettes(count)}</span></button>
+</aside>
+<div class="home-results">
+  ${banner}
+  ${groups.map(g => `
+  <section class="course" id="${g.key}"${g.recipes.some(fits) ? '' : ' hidden'}>
+    <h2>${esc(g.label)}</h2>
+    <ul class="cards">${g.recipes.map(r => card(r, fits(r))).join('')}</ul>
+  </section>`).join('')}
+  <p class="empty" id="no-result" hidden>Aucune recette ne correspond… <a href="/proposer">En proposer une ?</a></p>
+</div>
+</div>`;
+  return layout({ title: 'Accueil', theme, body, bodyClass: 'page-home' });
 }
 
 // Quantité affichée ; data-v permet de la recalculer selon les portions (sauf quantité fixe « = »).
