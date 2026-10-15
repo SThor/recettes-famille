@@ -122,6 +122,9 @@ const asText = v => (Array.isArray(v) ? v.join(', ') : typeof v === 'object' && 
 function recipeArticle(r, { back = true } = {}) {
   const m = r.meta;
   const servings = Number(m.servings) || null;
+  // Clé maison « servings unit » (bouchons, cookies, parts…) ; sinon des personnes.
+  const many = String(m['servings unit'] || '').trim() || 'pers.';
+  const unit = { many, one: many === 'pers.' ? many : many.replace(/(?<=\p{L}{2})[sx]$/u, '') };
   const facts = [
     m['prep time'] && ['Préparation', m['prep time']],
     m['cook time'] && ['Cuisson', m['cook time']],
@@ -159,7 +162,7 @@ function recipeArticle(r, { back = true } = {}) {
       <h2>Ingrédients</h2>
       ${servings ? `<div class="servings">
         <button type="button" data-step="-1" aria-label="Moins de portions">−</button>
-        <span><b id="servings-count">${servings}</b> pers.</span>
+        <span><b id="servings-count">${servings}</b> <span id="servings-unit" data-one="${esc(unit.one)}" data-many="${esc(unit.many)}">${esc(servings === 1 ? unit.one : unit.many)}</span></span>
         <button type="button" data-step="1" aria-label="Plus de portions">+</button>
       </div>` : ''}
     </div>

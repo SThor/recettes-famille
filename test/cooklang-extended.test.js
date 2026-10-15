@@ -111,6 +111,31 @@ test.describe('Affichage', () => {
     assert.deepEqual([...order].sort((a, b) => a - b), order);
   });
 
+  test.describe('Unité des portions (clé maison « servings unit »)', () => {
+    const render = meta => recipeArticle(fromSource(`---\ntitle: T\n${meta}\n---\n\n@thon{180%g}\n`, 'T.cook', null), { back: false });
+    const servingsBlock = out => out.slice(out.indexOf('<div class="servings"'), out.indexOf('</div>', out.indexOf('<div class="servings"')));
+
+    test('affiche l\'unité au lieu de « pers. »', () => {
+      const block = servingsBlock(render('servings: 20\nservings unit: bouchons'));
+      assert.match(block, /<b id="servings-count">20<\/b> <span id="servings-unit" data-one="bouchon" data-many="bouchons">bouchons<\/span>/);
+      assert.doesNotMatch(block, /pers\./);
+    });
+
+    test('sans unité : « pers. » comme avant', () => {
+      assert.match(servingsBlock(render('servings: 4')), /<b id="servings-count">4<\/b> <span id="servings-unit" data-one="pers\." data-many="pers\.">pers\.<\/span>/);
+    });
+
+    test('au singulier pour 1', () => {
+      assert.match(servingsBlock(render('servings: 1\nservings unit: gâteaux')), /data-one="gâteau" data-many="gâteaux">gâteau<\/span>/);
+    });
+
+    test('le recalcul des quantités ne change pas', () => {
+      const out = render('servings: 20\nservings unit: bouchons');
+      assert.match(out, /data-servings="20"/);
+      assert.match(out, /<span class="qty" data-v="180">180<\/span>&nbsp;g/);
+    });
+  });
+
   test('difficulté, cuisine, régime parmi les infos', () => {
     const out = html();
     assert.match(out, /<dt>Difficulté<\/dt><dd>facile<\/dd>/);
