@@ -74,6 +74,45 @@ test.describe('Site public (connecté)', () => {
     assert.doesNotMatch(html, /class="hero"/);
   });
 
+  test.describe('Liens entre recettes', () => {
+    const write = (file, meta, body = 'Mélanger.') => fs.writeFileSync(path.join(t.recipesDir, file), `---\n${meta}\n---\n\n${body}\n`);
+    const page = async slug => (await t.req(`/recette/${slug}`, { headers: { cookie } })).text();
+    const related = html => html.slice(html.indexOf('<nav class="related"'), html.indexOf('</nav>', html.indexOf('<nav class="related"')));
+
+    test('variante : lien vers l\'original, et l\'original liste ses variantes', async () => {
+      write('Champignons farcis.cook', 'title: Champignons farcis');
+      write('Champignons farcis au four.cook', 'title: Champignons farcis au four\nvariant of: Champignons farcis');
+      assert.match(related(await page('champignons-farcis-au-four')), /Variante de : <a href="\/recette\/champignons-farcis">Champignons farcis<\/a>/);
+      assert.match(related(await page('champignons-farcis')), /Variantes : <a href="\/recette\/champignons-farcis-au-four">Champignons farcis au four<\/a>/);
+    });
+
+    test('« voir aussi » dans les deux sens, par nom de fichier ou par titre', async () => {
+      write('Tarte.cook', 'title: Tarte du dimanche\nsee also: [Salade verte, Pounty de ma mamie]');
+      write('Salade verte.cook', 'title: Salade verte');
+      assert.match(related(await page('tarte')), /Voir aussi : <a href="\/recette\/salade-verte">Salade verte<\/a>, <a href="\/recette\/pounty">Pounty de ma mamie<\/a>/);
+      assert.match(related(await page('salade-verte')), /Voir aussi : <a href="\/recette\/tarte">Tarte du dimanche<\/a>/);
+      assert.match(related(await page('pounty')), /Voir aussi : <a href="\/recette\/tarte">Tarte du dimanche<\/a>/);
+    });
+
+    test('recette importée (@./…) : « Utilisée dans »', async () => {
+      write('Pâte brisée.cook', 'title: Pâte brisée');
+      write('Tarte aux poireaux.cook', 'title: Tarte aux poireaux', 'Étaler la @./Pâte brisée{}.');
+      assert.match(related(await page('pate-brisee')), /Utilisée dans : <a href="\/recette\/tarte-aux-poireaux">Tarte aux poireaux<\/a>/);
+    });
+
+    test('recette inconnue ou archivée : nom en simple texte, sans lien', async () => {
+      write('Gratin.cook', 'title: Gratin\nvariant of: Recette disparue\nsee also: Curry archivé');
+      const nav = related(await page('gratin'));
+      assert.match(nav, /Variante de : <span>Recette disparue<\/span>/);
+      assert.match(nav, /Voir aussi : <span>Curry archivé<\/span>/);
+      assert.doesNotMatch(nav, /href="\/recette\/(recette-disparue|curry-archive)"/);
+    });
+
+    test('pas de bloc quand il n\'y a aucun lien', async () => {
+      assert.doesNotMatch(await page('galette-seche'), /<nav class="related"/);
+    });
+  });
+
   test.describe('Recettes archivées (Recettes/Archives/)', () => {
     test('absentes de l\'accueil et introuvables', async () => {
       const home = await (await t.req('/', { headers: { cookie } })).text();

@@ -117,6 +117,20 @@ function stepHtml(parts, ctx = { timer: 0 }) {
   }).join('');
 }
 
+// Liens vers les recettes liées (variante de, variantes, voir aussi, utilisée dans).
+function relatedHtml(related) {
+  if (!related) return '';
+  const link = x => (x.slug ? `<a href="/recette/${x.slug}">${esc(x.title)}</a>` : `<span>${esc(x.title)}</span>`);
+  const rows = [
+    ['Variante de', related.variantOf],
+    ['Variantes', related.variants],
+    ['Voir aussi', related.seeAlso],
+    ['Utilisée dans', related.usedIn],
+  ].filter(([, list]) => list.length);
+  if (!rows.length) return '';
+  return `<nav class="related" aria-label="Recettes liées">${rows.map(([label, list]) => `<p>${label} : ${list.map(link).join(', ')}</p>`).join('')}</nav>`;
+}
+
 const asText = v => (Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v ? v.name || '' : String(v));
 
 function recipeArticle(r, { back = true } = {}) {
@@ -156,6 +170,7 @@ function recipeArticle(r, { back = true } = {}) {
   ${m.description ? `<p class="description">${esc(m.description)}</p>` : ''}
   ${r.tags.length ? `<p class="tags">${r.tags.map(t => `<span>${esc(t)}</span>`).join('')}</p>` : ''}
   ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+  ${relatedHtml(r.related)}
 
   <section class="ingredients">
     <div class="section-head">

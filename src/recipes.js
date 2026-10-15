@@ -59,6 +59,40 @@ function fromSource(src, file, dir) {
   };
 }
 
+// Liens entre recettes, calculés dans les deux sens :
+//   `variant of: X`   → « Variante de : X » ici, « Variantes : … » chez X
+//   `see also: [X, Y]` → « Voir aussi » des deux côtés
+//   `@./X{}`           → « Utilisée dans : … » chez X
+// X = nom de fichier (sans .cook) ou titre ; recette introuvable → { title, slug: null } (pas de lien).
+function linkRecipes(recipes) {
+  const bySlug = new Map();
+  for (const r of recipes) {
+    bySlug.set(r.slug, r);
+    if (!bySlug.has(slugify(r.title))) bySlug.set(slugify(r.title), r);
+  }
+  const find = name => bySlug.get(slugify(String(name).split('/').pop()));
+  const ref = (name, r = find(name)) => (r ? { title: r.title, slug: r.slug } : { title: String(name), slug: null });
+  const add = (list, item) => { if (!list.some(x => x.title === item.title && x.slug === item.slug)) list.push(item); };
+
+  for (const r of recipes) r.related = { variantOf: [], variants: [], seeAlso: [], usedIn: [] };
+  for (const r of recipes) {
+    for (const name of asList(r.meta['variant of'])) {
+      const target = find(name);
+      add(r.related.variantOf, ref(name, target));
+      if (target && target !== r) add(target.related.variants, ref(null, r));
+    }
+    for (const name of asList(r.meta['see also'])) {
+      const target = find(name);
+      add(r.related.seeAlso, ref(name, target));
+      if (target && target !== r) add(target.related.seeAlso, ref(null, r));
+    }
+    for (const ing of r.ingredients) {
+      const target = ing.ref && find(ing.ref);
+      if (target && target !== r) add(target.related.usedIn, ref(null, r));
+    }
+  }
+}
+
 function createStore(dir) {
   let cache = null;
   let cachedAt = 0;
@@ -75,6 +109,7 @@ function createStore(dir) {
       }
     }
     recipes.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
+    linkRecipes(recipes);
     cache = recipes;
     cachedAt = Date.now();
     return recipes;
