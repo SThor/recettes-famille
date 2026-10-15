@@ -64,3 +64,6 @@
   .theme-pastel .intro { margin: 16px 0 8px; border-radius: 28px; }
   .theme-pastel .hero { width: 100%; margin: 8px 0 0; border-radius: 28px; }
 }
+/* Bloc « Étiquettes » posé sur le fond à pois : pastilles crème pour rester lisibles. */
+.theme-pastel .tag-cloud .tags .tag { background: var(--surface); }
+.theme-pastel .tag-cloud summary { background: var(--surface); display: inline-block; padding: 2px 12px; border-radius: 12px; }

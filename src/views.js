@@ -71,7 +71,7 @@ const jsonForScript = data => JSON.stringify(data).replace(/</g, '\\u003c');
 function home({ groups, theme, tag = '', tags = [] }) {
   const tagCloud = tags.length ? `<details class="tag-cloud">
     <summary>Étiquettes <span class="count">${tags.length}</span></summary>
-    <p class="tags">${tags.map(x => `<a class="tag" href="/?tag=${encodeURIComponent(x.name)}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</p>
+    <div class="tags">${tags.map(x => `<a class="tag" href="/?tag=${encodeURIComponent(x.name)}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
   const count = groups.reduce((n, g) => n + g.recipes.length, 0);
   const tagBanner = tag ? `<p class="tag-filter">Étiquette : <b>${esc(tag)}</b> · ${count} recette${count > 1 ? 's' : ''} <a href="/" aria-label="Voir toutes les recettes">✕</a></p>
