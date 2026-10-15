@@ -24,7 +24,7 @@ function writeAtomic(full, data) {
 module.exports = function adminRouter({ store, git, dataDir, adminPassword, safeEqual }) {
   const router = express.Router();
   const dir = store.dir;
-  const states = { pending: path.join(dataDir, 'a-moderer'), done: path.join(dataDir, 'traitees'), archived: path.join(dataDir, 'archivees') };
+  const states = { pending: path.join(dataDir, 'a-moderer'), done: path.join(dataDir, 'traitees'), archived: path.join(dataDir, 'archivees'), imported: path.join(dataDir, 'importees') };
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: 25 * 1024 * 1024 } });
   const form = express.urlencoded({ extended: false, limit: '1mb' });
 
@@ -72,7 +72,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       let history = null;
       try { history = await git.log(15); } catch {}
       res.send(adminViews.dashboard({
-        theme: req.theme, user: req.user, recipes: store.all(), proposals: listProposals(),
+        theme: req.theme, user: req.user, recipes: store.all(), proposals: listProposals(), imported: listProposals('imported'),
         todo: readTodo(), history, flash: req.query.ok,
       }));
     } catch (err) { next(err); }

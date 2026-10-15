@@ -804,6 +804,16 @@ test.describe('Admin', () => {
       assert.ok(!fs.existsSync(path.join(t.recipesDir, 'X.cook')));
     });
 
+    test('propositions importées dans le vault : listées à part, plus « à traiter »', async () => {
+      const dir = path.join(path.dirname(t.submissionsDir), 'importees', '2026-10-15T08-00-00-000Z-imp001');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'recette.json'), JSON.stringify({ prenom: 'Marc', titre: 'Tarte au citron', texte: 'x', photos: [], date: '15/10/2026' }));
+      const html = await (await t.admin('/admin')).text();
+      assert.match(html, /<h3>Importées dans le vault <span class="count">1<\/span><\/h3>/);
+      assert.match(html, /Tarte au citron<\/b> <span class="muted">par Marc, 15\/10\/2026<\/span>/);
+      assert.match(html, /Propositions <span class="count">0<\/span>/);
+    });
+
     test('archiver : conservée dans archivees', async () => {
       const id = proposal({ photos: 0 });
       await t.admin(`/admin/propositions/${id}/archiver`, { method: 'POST' });

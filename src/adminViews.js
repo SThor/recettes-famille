@@ -25,7 +25,7 @@ const FILTERS = [
 ];
 const wikiText = s => esc(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a);
 
-function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
+function dashboard({ theme, user, recipes, proposals, imported = [], todo, history, flash }) {
   const n = recipes.length;
   const count = f => recipes.filter(f).length;
   const stats = [
@@ -60,7 +60,10 @@ function dashboard({ theme, user, recipes, proposals, todo, history, flash }) {
   ${proposals.length ? `<ul class="admin-list">${proposals.map(p => `<li>
     <a href="/admin/propositions/${enc(p.id)}"><b>${esc(p.titre)}</b></a>
     <span class="muted">par ${esc(p.prenom)}, ${esc(p.date)}${p.photos.length ? ` · ${p.photos.length} photo${p.photos.length > 1 ? 's' : ''}` : ''}</span>
-  </li>`).join('')}</ul>` : '<p class="muted">Rien en attente.</p>'}`)}
+  </li>`).join('')}</ul>` : '<p class="muted">Rien en attente.</p>'}
+  ${imported.length ? `<h3>Importées dans le vault <span class="count">${imported.length}</span></h3>
+  <p class="muted small">Récupérées avec deploy/recuperer-propositions.sh, à mettre au propre par l’agent du vault.</p>
+  <ul class="admin-list">${imported.map(p => `<li><span><b>${esc(p.titre)}</b> <span class="muted">par ${esc(p.prenom)}, ${esc(p.date)}</span></span></li>`).join('')}</ul>` : ''}`)}
 
   ${panel('recettes', `<div class="panel-head"><h2>Recettes</h2><a class="button button-small" href="/admin/recettes/nouvelle">+ Nouvelle recette</a></div>
   <p class="stats"><b>${n} recettes</b> · ${stats.map(([k, v]) => `${k} : ${v}/${n}`).join(' · ')}</p>
