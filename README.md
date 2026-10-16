@@ -6,7 +6,9 @@ Petite web app mobile-first pour le livre de recettes de la famille : liste et a
 - Source des recettes : le dossier `Recettes/` du vault (sans `Archives/`). Photo du plat = image du même nom à côté du `.cook` ; fiches d'origine via la propriété `original`.
 - Accès réservé à la famille ; réglages dans `.env` (voir `.env.example`).
 - Dépôts : `data/a-moderer/<date>/` (un `.md`, un `recette.json`, les photos). Une fois traités : `data/traitees/` ou `data/archivees/` (jamais supprimés).
-- Administration : propositions → `.cook` (éditeur avec aperçu, rôle de chaque photo), suivi des recettes (case « vérifiée » → `verifie: <prénom> <date>`), liste `À demander.md`, historique git.
+- Administration : propositions → `.cook` (éditeur avec aperçu, rôle de chaque photo), suivi des recettes (case « vérifiée » → `checked by: <prénom> <date>`), liste `À demander.md`, historique git.
+- Relecture par la famille (page recette, colonne de droite) : connexion avec prénom, réponses aux questions (écrites dans le commentaire `--` : « ↳ Prénom : … »), case « Conforme à l'original », « Il y a une erreur ? ».
+- Clés d'en-tête des personnes : `author` = la personne dont c'est la recette (« Recette de », clé standard Cooklang), `shared by` = qui l'a transmise si c'est quelqu'un d'autre (« Transmise par »), `source` = livre, magazine, fiche. Vérification : `checked by: <prénom> <date>`.
 - Styles d'essai : `/essais/simple`, `/essais/pastel`, `/essais/vichy` (cookie, s'applique à tout le site).
 
 ## Local

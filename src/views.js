@@ -91,6 +91,9 @@ function cardReview(r) {
   return `<span class="card-review" data-state="${state}" title="${label}" role="img" aria-label="${label}">${icon(name, 16)}</span>`;
 }
 
+// « de … » sur une carte : la personne dont c'est la recette, sinon celle qui l'a transmise.
+const cardBy = r => asText(r.meta.author || r.meta['shared by'] || '');
+
 function card(r, visible = true) {
   // Recherche libre : titre, ingrédients, étiquettes, personnes (rapporteur + origine) et source.
   const search = [r.title, ...r.ingredients.map(i => i.name), ...r.tags, ...peopleOf(r), r.meta.source && asText(r.meta.source)].filter(Boolean).join(' ').toLowerCase();
@@ -99,7 +102,7 @@ function card(r, visible = true) {
   <a href="/recette/${r.slug}">
     ${r.photo ? `<img src="/photos/${enc(r.photo)}" alt="" loading="lazy">` : ''}
     <span class="card-title">${esc(r.title)}${cardReview(r)}</span>
-    ${r.meta.author ? `<span class="card-meta">de ${esc(r.meta.author)}</span>` : ''}
+    ${cardBy(r) ? `<span class="card-meta">de ${esc(cardBy(r))}</span>` : ''}
     ${cardFacts(r)}
   </a>
 </li>`;
@@ -279,9 +282,9 @@ function recipeArticle(r, { back = true, originals = true } = {}) {
     m.difficulty && ['Difficulté', m.difficulty],
     m.cuisine && ['Cuisine', m.cuisine],
     m.diet && ['Régime', m.diet],
-    m.from && ['Recette de', m.from], // clé maison : personne(s) d'origine
+    m.author && ['Recette de', m.author], // personne(s) dont c'est la recette (clé standard)
     m.source && ['Source', m.source],
-    m.author && ['Transmise par', m.author],
+    m['shared by'] && ['Transmise par', m['shared by']], // clé maison : qui l'a transmise, si différent
   ].filter(Boolean).map(([k, v]) => {
     // Régimes et personnes mènent à l'accueil filtré sur cette valeur.
     const param = { 'Régime': 'regime', 'Recette de': 'personne', 'Transmise par': 'personne' }[k];
@@ -354,7 +357,7 @@ const MERCI = {
 function reviewHtml(r, { account, merci, error }) {
   const action = what => `/recette/${r.slug}/${what}`;
   const nameField = account?.prenom ? '' : '<label>Ton prénom<input name="prenom" required maxlength="40" autocomplete="given-name"></label>';
-  const verified = r.meta.verifie ? String(r.meta.verifie) : '';
+  const verified = r.meta['checked by'] ? String(r.meta['checked by']) : '';
   const blocked = !verified && r.threads.length > 0;
   const authors = peopleOf(r);
 
@@ -404,10 +407,10 @@ function reviewHtml(r, { account, merci, error }) {
 // État de la relecture, visible même panneau replié : ✓ si vérifiée sans question, ⚠ sinon.
 function reviewStatus(r) {
   const n = r.threads.length; // ✓ ssi reviewStateOf(r) === 'ok'
-  const problems = [n && `${n} question${n > 1 ? 's' : ''} en suspens`, !r.meta.verifie && 'pas encore vérifiée conforme'].filter(Boolean);
+  const problems = [n && `${n} question${n > 1 ? 's' : ''} en suspens`, !r.meta['checked by'] && 'pas encore vérifiée conforme'].filter(Boolean);
   return problems.length
     ? { status: 'warn', icon: icon('alert', 20), label: problems.join(' · ') }
-    : { status: 'ok', icon: icon('check', 20), label: `tout est bon (vérifiée : ${asText(r.meta.verifie)})` };
+    : { status: 'ok', icon: icon('check', 20), label: `tout est bon (vérifiée : ${asText(r.meta['checked by'])})` };
 }
 
 // Bouton d'une colonne latérale : même icône que le panneau de filtres (en miroir à droite).

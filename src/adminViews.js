@@ -8,10 +8,10 @@ function recipeFlags(r) {
   const m = r.meta;
   const flags = [];
   if (r.questions.length) flags.push('questions');
-  else if (!m.verifie) flags.push('a-verifier');
-  if (!m.author || !m.source || !m.servings) flags.push('infos');
+  else if (!m['checked by']) flags.push('a-verifier');
+  if (!(m.author || m['shared by']) || !m.source || !m.servings) flags.push('infos');
   if (!r.photo) flags.push('photo');
-  return flags.length || !m.verifie ? ['a-finir', ...flags] : ['terminee'];
+  return flags.length || !m['checked by'] ? ['a-finir', ...flags] : ['terminee'];
 }
 
 const FILTERS = [
@@ -29,10 +29,10 @@ function dashboard({ theme, user, recipes, proposals, imported = [], todo, histo
   const n = recipes.length;
   const count = f => recipes.filter(f).length;
   const stats = [
-    ['vérifiées', count(r => r.meta.verifie)],
+    ['vérifiées', count(r => r.meta['checked by'])],
     ['portions', count(r => r.meta.servings)],
     ['photos du plat', count(r => r.photo)],
-    ['auteur', count(r => r.meta.author)],
+    ['auteur', count(r => r.meta.author || r.meta['shared by'])],
   ];
   const todoItems = todo ? todo.sections.flatMap(s => s.entries.filter(e => e.type === 'item')) : [];
   const tabs = [
@@ -79,14 +79,14 @@ function dashboard({ theme, user, recipes, proposals, imported = [], todo, histo
     </div>
     <div class="row badges">
       <span class="muted small">${esc(r.course || '—')}</span>
-      <span>Auteur ${yes(r.meta.author)}</span>
+      <span>Auteur ${yes(r.meta.author || r.meta['shared by'])}</span>
       <span>Source ${yes(r.meta.source)}</span>
       <span>Portions ${yes(r.meta.servings)}</span>
       <span>Photo ${yes(r.photo)}</span>
     </div>
     <form method="post" action="/admin/recettes/${r.slug}/verifie" class="verify">
-      <label title="Relue et conforme à la recette d’origine, sans question en suspens"><input type="checkbox" name="verifie" ${r.meta.verifie ? 'checked' : ''} onchange="this.form.submit()">
-        Conforme à l’original${r.meta.verifie ? ` <span class="muted small">(${esc(r.meta.verifie)})</span>` : ''}</label>
+      <label title="Relue et conforme à la recette d’origine, sans question en suspens"><input type="checkbox" name="verifie" ${r.meta['checked by'] ? 'checked' : ''} onchange="this.form.submit()">
+        Conforme à l’original${r.meta['checked by'] ? ` <span class="muted small">(${esc(r.meta['checked by'])})</span>` : ''}</label>
       ${r.questions.length ? `<span class="questions" title="${esc(r.questions.join(' · '))}">⚠ ${r.questions.length} question${r.questions.length > 1 ? 's' : ''} en suspens</span>` : ''}
       <noscript><button>OK</button></noscript>
     </form>

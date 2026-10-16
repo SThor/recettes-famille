@@ -81,6 +81,6 @@ const REVIEW_STATES = [
   ['questions', 'Questions à résoudre'],
   ['a-verifier', 'Pas encore vérifiées'],
 ];
-const reviewStateOf = r => (r.threads.length ? 'questions' : r.meta.verifie ? 'ok' : 'a-verifier');
+const reviewStateOf = r => (r.threads.length ? 'questions' : r.meta['checked by'] ? 'ok' : 'a-verifier');
 
 module.exports = { REVIEW_STATES, reviewStateOf, questionsOf, threadsOf, answerQuestion, reportError, cleanName, oneLine };

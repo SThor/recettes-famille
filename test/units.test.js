@@ -97,9 +97,9 @@ test.describe('À demander', () => {
 test.describe('En-tête', () => {
   test('remplace une clé existante sans toucher au reste', () => {
     const src = read('Pounty.cook');
-    const out = setField(src, 'verifie', 'Paul 2026-10-15');
-    assert.match(out, /^verifie: Paul 2026-10-15$/m);
-    assert.equal(out.replace('verifie: Paul 2026-10-15', 'verifie:'), src);
+    const out = setField(src, 'checked by', 'Paul 2026-10-15');
+    assert.match(out, /^checked by: Paul 2026-10-15$/m);
+    assert.equal(out.replace('checked by: Paul 2026-10-15', 'checked by:'), src);
   });
 
   test('ajoute une clé absente, vide une clé', () => {

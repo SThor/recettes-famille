@@ -230,7 +230,7 @@ function createApp({
     if (on && r.questions.length) return refuse(409, 'Il reste des questions sur cette recette : on pourra la dire conforme quand elles seront réglées.');
     try {
       await git.write(`Site : « ${r.title} » ${on ? `vérifiée par ${who}` : `n'est plus vérifiée (${who})`}`, who, () => {
-        writeAtomic(full, setField(fs.readFileSync(full, 'utf8'), 'verifie', on ? `${who} ${today()}` : ''));
+        writeAtomic(full, setField(fs.readFileSync(full, 'utf8'), 'checked by', on ? `${who} ${today()}` : ''));
       });
       done(res, r, on ? 'conforme' : 'non-conforme');
     } catch (err) { next(err); }
@@ -246,7 +246,7 @@ function createApp({
       // Une erreur signalée retire la vérification : la recette n'est plus conforme.
       await git.write(`Site : erreur signalée sur « ${r.title} » par ${who}`, who, () => {
         const out = reportError(fs.readFileSync(full, 'utf8'), who, texte);
-        writeAtomic(full, r.meta.verifie ? setField(out, 'verifie', '') : out);
+        writeAtomic(full, r.meta['checked by'] ? setField(out, 'checked by', '') : out);
       });
       done(res, r, 'erreur');
     } catch (err) { next(err); }

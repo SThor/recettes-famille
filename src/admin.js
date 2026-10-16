@@ -98,12 +98,12 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   // Case « Vérifiée » du formulaire : cochée → garde la vérification existante ou en crée une
   // au nom de l'utilisateur ; décochée → vide le champ. En-tête illisible : on laisse validate() le signaler.
   function verifiedOf(source) {
-    try { return fromSource(source, 'x.cook', null).meta.verifie || ''; } catch { return ''; }
+    try { return fromSource(source, 'x.cook', null).meta['checked by'] || ''; } catch { return ''; }
   }
   function applyVerified(source, req) {
     const current = verifiedOf(source);
-    if (req.body.verifie && !current) return setField(source, 'verifie', `${req.user} ${today()}`);
-    if (!req.body.verifie && current) return setField(source, 'verifie', '');
+    if (req.body.verifie && !current) return setField(source, 'checked by', `${req.user} ${today()}`);
+    if (!req.body.verifie && current) return setField(source, 'checked by', '');
     return source;
   }
 
@@ -142,13 +142,14 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       '---',
       `title: ${p.titre}`,
       `author: ${p.prenom}`,
+      'shared by:',
       'source:',
       'servings:',
       'course:',
       'tags: []',
       'prep time:',
       'cook time:',
-      'verifie:',
+      'checked by:',
       '---',
       '',
       ...(p.anecdote ? [`> ${p.prenom} : « ${p.anecdote.replace(/\s*\n\s*/g, ' ')} »`, ''] : []),
@@ -217,7 +218,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   });
 
   // --- Recettes : création et édition ---
-  const NEW_TEMPLATE = ['---', 'title: ', 'author: ', 'source: ', 'servings: ', 'course: plat', 'tags: []', 'prep time: ', 'cook time: ', 'verifie:', '---', '', 'Mélanger la @farine{250%g} et les @œufs{3} dans un #saladier{}.', '', 'Cuire ~{30%minutes}.', ''].join('\n');
+  const NEW_TEMPLATE = ['---', 'title: ', 'author: ', 'shared by: ', 'source: ', 'servings: ', 'course: plat', 'tags: []', 'prep time: ', 'cook time: ', 'checked by:', '---', '', 'Mélanger la @farine{250%g} et les @œufs{3} dans un #saladier{}.', '', 'Cuire ~{30%minutes}.', ''].join('\n');
 
   router.get('/recettes/nouvelle', (req, res) => {
     res.send(renderEditor({ theme: req.theme, title: 'Nouvelle recette', action: '/admin/recettes/nouvelle', source: NEW_TEMPLATE, fichier: '', isNew: true }));
@@ -276,7 +277,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       source = applyVerified(source, req);
       const r = validate(source);
       if (source === current && !req.file) return back(res, 'recettes', 'Aucun changement.');
-      const after = r.meta.verifie || '';
+      const after = r.meta['checked by'] || '';
       const what = before === after ? 'modifiée' : after ? `vérifiée par ${req.user}` : 'n’est plus vérifiée';
       await git.write(`Site : « ${r.title} » ${what}`, req.user, async () => {
         if (source !== current) writeAtomic(full, source);
@@ -298,7 +299,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       const value = req.body.verifie ? `${req.user} ${today()}` : '';
       const full = path.join(dir, r.file);
       await git.write(`Site : « ${r.title} » ${value ? `vérifiée par ${req.user}` : 'n\'est plus vérifiée'}`, req.user, () => {
-        writeAtomic(full, setField(fs.readFileSync(full, 'utf8'), 'verifie', value));
+        writeAtomic(full, setField(fs.readFileSync(full, 'utf8'), 'checked by', value));
       });
       store.invalidate();
       back(res, 'recettes');

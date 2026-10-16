@@ -5,7 +5,7 @@ const { startApp, FAMILY } = require('./helpers');
 const { reviewStateOf } = require('../src/revue');
 
 test.describe('État de relecture d\'une recette', () => {
-  const r = (verifie, threads) => ({ meta: { verifie }, threads: Array.from({ length: threads }, () => ({ question: 'q', answers: [] })) });
+  const r = (verifie, threads) => ({ meta: { 'checked by': verifie }, threads: Array.from({ length: threads }, () => ({ question: 'q', answers: [] })) });
   test('vérifiée sans question → ok ; question en suspens → questions (même si vérifiée) ; sinon → a-verifier', () => {
     assert.equal(reviewStateOf(r('Paul 2026-10-16', 0)), 'ok');
     assert.equal(reviewStateOf(r('', 1)), 'questions');

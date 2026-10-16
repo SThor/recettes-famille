@@ -121,11 +121,12 @@ function countValues(recipes, valuesOf, { capitalized = false } = {}) {
 }
 const normValue = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 
-// Personnes liées à une recette : qui l'a transmise (`author`) et de qui elle vient (clé maison `from`).
+// Personnes liées à une recette : de qui elle vient (`author`, clé standard Cooklang)
+// et qui l'a transmise si c'est quelqu'un d'autre (clé maison `shared by`).
 // Une personne à la fois auteur et origine (même prénom, casse ou espaces près) n'apparaît qu'une fois.
 const peopleOf = r => {
   const seen = new Set();
-  return [...asList(r.meta.author), ...asList(r.meta.from)].map(s => String(s).trim())
+  return [...asList(r.meta.author), ...asList(r.meta['shared by'])].map(s => String(s).trim())
     .filter(s => s && !seen.has(normValue(s)) && seen.add(normValue(s)));
 };
 

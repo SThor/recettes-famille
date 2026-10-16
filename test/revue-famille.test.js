@@ -152,16 +152,16 @@ test.describe('Relecture par la famille (site)', () => {
   });
 
   test.describe('Conforme à l\'original', () => {
-    test('cochée par un membre de la famille : verifie = prénom + date, commit, affichage', async () => {
+    test('cochée par un membre de la famille : checked by = prénom + date, commit, affichage', async () => {
       const cookie = await login();
       const res = await post('/recette/galette-seche/conforme', cookie, { conforme: '1' });
       assert.equal(res.status, 302);
-      assert.match(t.read('Galette sèche.cook'), /\nverifie: Carole \d{4}-\d{2}-\d{2}\n/);
+      assert.match(t.read('Galette sèche.cook'), /\nchecked by: Carole \d{4}-\d{2}-\d{2}\n/);
       assert.equal(t.log(), 'Carole (site)|Site : « Galette sèche » vérifiée par Carole');
       assert.match(await page('/recette/galette-seche', cookie), /name="conforme"[^>]*checked/);
       // Décochée : le champ est vidé
       await post('/recette/galette-seche/conforme', cookie, {});
-      assert.match(t.read('Galette sèche.cook'), /\nverifie:\s*\n/);
+      assert.match(t.read('Galette sèche.cook'), /\nchecked by:\s*\n/);
     });
 
     test('refusée tant qu\'il reste des questions (case grisée)', async () => {
@@ -187,7 +187,7 @@ test.describe('Relecture par la famille (site)', () => {
       assert.match(res.headers.get('location'), /merci=erreur/);
       const src = t.read('Galette sèche.cook');
       assert.match(src, /\n\n-- ⚠ Erreur signalée par Carole : Il manque le beurre\n$/);
-      assert.match(src, /\nverifie:\s*\n/);
+      assert.match(src, /\nchecked by:\s*\n/);
       assert.equal(t.log(), 'Carole (site)|Site : erreur signalée sur « Galette sèche » par Carole');
       const revue = (await page('/recette/galette-seche', cookie)).split('id="revue"')[1];
       assert.match(revue, /Erreur signalée par Carole : Il manque le beurre/);
@@ -259,15 +259,15 @@ test.describe('Page recette en trois colonnes (fiche d\'origine | recette | rele
 test.describe('Personnes d\'une recette sans doublon', () => {
   const { peopleOf } = require('../src/recipes');
   test('peopleOf : même prénom en auteur et en origine (casse ou espaces différents) → une seule fois', () => {
-    assert.deepEqual(peopleOf({ meta: { author: 'Carole', from: ' carole ' } }), ['Carole']);
-    assert.deepEqual(peopleOf({ meta: { author: 'Maman', from: ['Carole', 'maman'] } }), ['Maman', 'Carole']);
+    assert.deepEqual(peopleOf({ meta: { author: 'Carole', 'shared by': ' carole ' } }), ['Carole']);
+    assert.deepEqual(peopleOf({ meta: { author: 'Maman', 'shared by': ['Carole', 'maman'] } }), ['Maman', 'Carole']);
   });
 
   test('relecture : « Idéalement cochée par Carole », pas « Carole ou Carole »', async () => {
     const t = await startApp();
     try {
       require('fs').writeFileSync(require('path').join(t.recipesDir, 'Gâteau au yaourt.cook'),
-        '---\ntitle: Gâteau au yaourt\nauthor: Carole\nfrom: Carole\n---\n\nMélanger.\n');
+        '---\ntitle: Gâteau au yaourt\nauthor: Carole\nshared by: Carole\n---\n\nMélanger.\n');
       const cookie = (await t.req(`/entrer?cle=${FAMILY}`)).headers.get('set-cookie').split(';')[0];
       const html = await (await t.req('/recette/gateau-au-yaourt', { headers: { cookie } })).text();
       assert.match(html, /Idéalement cochée par Carole\./);

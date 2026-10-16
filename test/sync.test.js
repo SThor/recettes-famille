@@ -33,7 +33,7 @@ function siteEdit(f, transform) {
 }
 
 test('modifs des deux côtés sur des fichiers différents : tout est fusionné', { skip: !BASH && 'bash introuvable' }, () => {
-  siteEdit('Pounty.cook', s => s.replace('verifie:', 'verifie: Aline 2026-10-15'));
+  siteEdit('Pounty.cook', s => s.replace('checked by:', 'checked by: Aline 2026-10-15'));
   write(vault, 'Galette sèche.cook', read(vault, 'Galette sèche.cook').replace('servings:', 'servings: 8'));
   write(vault, 'Nouvelle.cook', '---\ntitle: Nouvelle\n---\n');
 
@@ -41,7 +41,7 @@ test('modifs des deux côtés sur des fichiers différents : tout est fusionné'
   assert.equal(r.status, 0, r.stdout + r.stderr);
 
   for (const dir of [vault, server]) {
-    assert.match(read(dir, 'Pounty.cook'), /verifie: Aline/);
+    assert.match(read(dir, 'Pounty.cook'), /checked by: Aline/);
     assert.match(read(dir, 'Galette sèche.cook'), /servings: 8/);
     assert.ok(fs.existsSync(path.join(dir, 'Nouvelle.cook')));
   }

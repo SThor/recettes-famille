@@ -210,14 +210,14 @@ test.describe('Site public (connecté)', () => {
     });
   });
 
-  test.describe('Filtre par personne (rapporteur « author » + origine « from » fusionnés)', () => {
+  test.describe('Filtre par personne (« author » = recette de + « shared by » = transmise par, fusionnés)', () => {
     const get = async url => (await t.req(url, { headers: { cookie } })).text();
     const cardsOf = html => [...html.matchAll(/<li class="card"(?![^>]*\bhidden\b)[^>]*>\s*<a href="\/recette\/([^"]+)"/g)].map(m => m[1]).sort();
     const write = (file, meta) => fs.writeFileSync(path.join(t.recipesDir, file), `---\n${meta}\n---\n\nMélanger.\n`);
 
     test.beforeEach(() => {
-      write('Roulé.cook', 'title: Roulé\nauthor: Maman\nfrom: Carole');               // venue de Carole, transmise par Maman
-      write('Salade.cook', 'title: Salade\nauthor: carole\nfrom: [Grand-Maman, Papa]'); // transmise par Carole
+      write('Roulé.cook', 'title: Roulé\nauthor: Carole\nshared by: Maman');                // venue de Carole, transmise par Maman
+      write('Salade.cook', 'title: Salade\nauthor: [Grand-Maman, Papa]\nshared by: carole'); // transmise par Carole
     });
 
     test('bloc « Personnes » : rapporteurs et personnes d\'origine fusionnés, comptés', async () => {
@@ -558,7 +558,7 @@ test.describe('Admin', () => {
 
     // Recette complète : toutes les infos, photo du plat, vérifiée, aucune question.
     const addComplete = () => {
-      fs.writeFileSync(path.join(t.recipesDir, 'Tarte finie.cook'), '---\ntitle: Tarte finie\nauthor: Maman\nsource: fiche\nservings: 6\ncourse: dessert\nverifie: Paul 2026-10-15\n---\n\nCuire la @pâte{1}.\n');
+      fs.writeFileSync(path.join(t.recipesDir, 'Tarte finie.cook'), '---\ntitle: Tarte finie\nauthor: Maman\nsource: fiche\nservings: 6\ncourse: dessert\nchecked by: Paul 2026-10-15\n---\n\nCuire la @pâte{1}.\n');
       fs.copyFileSync(path.join(t.recipesDir, 'Originaux', 'galette.jpg'), path.join(t.recipesDir, 'Tarte finie.jpg'));
     };
 
@@ -571,7 +571,7 @@ test.describe('Admin', () => {
     });
 
     test('une recette vérifiée mais avec une question n\'est pas terminée', async () => {
-      const src = t.read('Pounty.cook').replace('verifie:', 'verifie: Paul 2026-10-15').replace('servings: 6', 'servings: 6');
+      const src = t.read('Pounty.cook').replace('checked by:', 'checked by: Paul 2026-10-15').replace('servings: 6', 'servings: 6');
       fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src);
       fs.copyFileSync(path.join(t.recipesDir, 'Originaux', 'galette.jpg'), path.join(t.recipesDir, 'Pounty.jpg'));
       assert.deepEqual(flagsOf(await dashboard(), 'pounty'), ['a-finir', 'questions']);
@@ -603,11 +603,11 @@ test.describe('Admin', () => {
   test('cocher « vérifiée » écrit l\'en-tête et commite au nom de l\'utilisateur', async () => {
     const res = await t.admin('/admin/recettes/pounty/verifie', { method: 'POST', body: t.form({ verifie: 'on' }), user: 'Aline' });
     assert.equal(res.status, 302);
-    assert.match(t.read('Pounty.cook'), /^verifie: Aline \d{4}-\d{2}-\d{2}$/m);
+    assert.match(t.read('Pounty.cook'), /^checked by: Aline \d{4}-\d{2}-\d{2}$/m);
     assert.equal(t.log(), 'Aline (site)|Site : « Pounty de ma mamie » vérifiée par Aline');
     assert.equal(t.status(), '');
     await t.admin('/admin/recettes/pounty/verifie', { method: 'POST', body: t.form({}) });
-    assert.match(t.read('Pounty.cook'), /^verifie:$/m);
+    assert.match(t.read('Pounty.cook'), /^checked by:$/m);
   });
 
   test.describe('À demander', () => {
@@ -701,7 +701,7 @@ test.describe('Admin', () => {
       test('la case reflète l\'état de la recette', async () => {
         assert.doesNotMatch(checkbox(await (await t.admin('/admin/recettes/pounty')).text()), /checked/);
         const src = t.read('Pounty.cook');
-        fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src.replace('verifie:', 'verifie: Paul 2026-01-01'));
+        fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src.replace('checked by:', 'checked by: Paul 2026-01-01'));
         const html = await (await t.admin('/admin/recettes/pounty')).text();
         assert.match(checkbox(html), /checked/);
         assert.match(html, /Paul 2026-01-01/);
@@ -710,24 +710,24 @@ test.describe('Admin', () => {
       test('cocher sans autre modification enregistre la vérification', async () => {
         const src = t.read('Pounty.cook');
         assert.equal((await saveAs('Aline', src, sha1(src), true)).status, 302);
-        assert.match(t.read('Pounty.cook'), /^verifie: Aline \d{4}-\d{2}-\d{2}$/m);
+        assert.match(t.read('Pounty.cook'), /^checked by: Aline \d{4}-\d{2}-\d{2}$/m);
         assert.match(t.log(), /vérifiée par Aline/);
       });
 
       test('déjà vérifiée : garde le nom et la date d\'origine', async () => {
-        const src = t.read('Pounty.cook').replace('verifie:', 'verifie: Paul 2026-01-01');
+        const src = t.read('Pounty.cook').replace('checked by:', 'checked by: Paul 2026-01-01');
         fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src);
         await saveAs('Aline', src.replace('servings: 6', 'servings: 5'), sha1(src), true);
         const now = t.read('Pounty.cook');
-        assert.match(now, /^verifie: Paul 2026-01-01$/m);
+        assert.match(now, /^checked by: Paul 2026-01-01$/m);
         assert.match(now, /servings: 5/);
       });
 
       test('décocher retire la vérification', async () => {
-        const src = t.read('Pounty.cook').replace('verifie:', 'verifie: Paul 2026-01-01');
+        const src = t.read('Pounty.cook').replace('checked by:', 'checked by: Paul 2026-01-01');
         fs.writeFileSync(path.join(t.recipesDir, 'Pounty.cook'), src);
         await saveAs('Paul', src, sha1(src), false);
-        assert.match(t.read('Pounty.cook'), /^verifie:$/m);
+        assert.match(t.read('Pounty.cook'), /^checked by:$/m);
       });
 
       test('publier une proposition déjà vérifiée', async () => {
@@ -737,9 +737,9 @@ test.describe('Admin', () => {
         fs.writeFileSync(path.join(dir, 'recette.json'), JSON.stringify({ prenom: 'A', titre: 'Crêpes', texte: 'x', photos: [], date: 'd' }));
         assert.match(checkbox(await (await t.admin(`/admin/propositions/${id}`)).text()), /name="verifie"/);
         const fd = new FormData();
-        fd.set('fichier', 'Crêpes'); fd.set('source', '---\ntitle: Crêpes\nverifie:\n---\n\n@farine{250%g}\n'); fd.set('verifie', 'on');
+        fd.set('fichier', 'Crêpes'); fd.set('source', '---\ntitle: Crêpes\nchecked by:\n---\n\n@farine{250%g}\n'); fd.set('verifie', 'on');
         await t.admin(`/admin/propositions/${id}/publier`, { method: 'POST', body: fd, user: 'Aline' });
-        assert.match(t.read('Crêpes.cook'), /^verifie: Aline \d{4}-\d{2}-\d{2}$/m);
+        assert.match(t.read('Crêpes.cook'), /^checked by: Aline \d{4}-\d{2}-\d{2}$/m);
       });
     });
 
