@@ -384,3 +384,23 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
   if (saved) set(true);
   btn.addEventListener('click', () => set(!document.body.classList.contains('sidebar-collapsed')));
 })();
+
+// Page recette : colonnes latérales (fiche d'origine, relecture) repliées par défaut.
+// Écran moyen : une seule ouverte à la fois, pour garder la recette lisible.
+(() => {
+  const sides = [...document.querySelectorAll('.side:not(.side-empty)')];
+  if (!sides.length) return;
+  const set = (side, open) => {
+    side.dataset.open = String(open);
+    side.querySelector('.side-toggle').setAttribute('aria-expanded', String(open));
+  };
+  for (const side of sides) {
+    side.querySelector('.side-toggle').addEventListener('click', () => {
+      const open = side.dataset.open !== 'true';
+      if (open && matchMedia('(min-width: 1000px) and (max-width: 1299px)').matches) {
+        sides.filter(s => s !== side).forEach(s => set(s, false));
+      }
+      set(side, open);
+    });
+  }
+})();

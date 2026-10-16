@@ -111,3 +111,7 @@
 .theme-vichy .filters-panel .diets .diet, .theme-vichy .duree-preset, .theme-vichy .filter-pill, .theme-vichy .card-fact { border-radius: 2px; }
 .theme-vichy .pill-remove { border-radius: 2px; }
 .theme-vichy .filters-panel .people .person { border-radius: 2px; }
+
+/* Colonnes latérales de la page recette : titres manuscrits comme « Ingrédients », coins carrés */
+.theme-vichy .side-panel > h2 { font-family: "Caveat", cursive; font-size: 1.7rem; color: var(--accent); margin: 8px 0 6px; }
+.theme-vichy .revue .thread { border-radius: var(--radius); }

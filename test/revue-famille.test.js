@@ -207,3 +207,51 @@ test.describe('Relecture par la famille (site)', () => {
     });
   });
 });
+
+test.describe('Page recette en trois colonnes (fiche d\'origine | recette | relecture)', () => {
+  let t;
+  test.beforeEach(async () => { t = await startApp(); });
+  test.afterEach(async () => { await t.close(); });
+  const cookieOf = async () => (await t.req('/connexion', { method: 'POST', body: t.form({ prenom: 'Carole', motdepasse: FAMILY }) })).headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
+  const page = async (url, cookie) => (await t.req(url, { headers: { cookie } })).text();
+  const side = (html, which) => (html.match(new RegExp(`<div class="side side-${which}"[^>]*>`)) || [''])[0];
+
+  test('fiche d\'origine dans la colonne de gauche, repliée par défaut, plus dans la recette', async () => {
+    const html = await page('/recette/galette-seche', await cookieOf());
+    assert.match(html, /class="recipe-layout"/);
+    assert.match(side(html, 'left'), /data-open="false"/);
+    assert.match(html, /<button type="button" class="side-toggle"[^>]*aria-controls="cote-original"[^>]*aria-expanded="false"/);
+    assert.match(html, /id="cote-original"[\s\S]*src="\/photos\/Originaux\/galette\.jpg"/);
+    assert.doesNotMatch(html, /class="originals"/);
+  });
+
+  test('sans fiche d\'origine : pas de bouton à gauche', async () => {
+    assert.doesNotMatch(await page('/recette/pounty', await cookieOf()), /aria-controls="cote-original"/);
+  });
+
+  test('relecture à droite, repliée par défaut, ouverte après une action', async () => {
+    const cookie = await cookieOf();
+    const html = await page('/recette/pounty', cookie);
+    assert.match(side(html, 'right'), /data-open="false"/);
+    assert.match(html, /<button type="button" class="side-toggle"[^>]*aria-controls="revue"[^>]*aria-expanded="false"/);
+    assert.match(side(await page('/recette/pounty?merci=reponse', cookie), 'right'), /data-open="true"/);
+    const refused = await t.req('/recette/pounty/conforme', { method: 'POST', body: t.form({ conforme: '1' }), headers: { cookie } });
+    assert.match(side(await refused.text(), 'right'), /data-open="true"/);
+  });
+
+  test('statut visible replié : ⚠ s\'il reste une question ou si elle n\'est pas vérifiée, ✓ si tout est bon', async () => {
+    const cookie = await cookieOf();
+    const toggle = html => html.match(/<button type="button" class="side-toggle"[^>]*aria-controls="revue"[\s\S]*?<\/button>/)[0];
+    const pounty = toggle(await page('/recette/pounty', cookie));
+    assert.match(pounty, /data-status="warn"/);
+    assert.match(pounty, /icon-alert/);
+    assert.match(pounty, /1 question en suspens/);
+    const galette = toggle(await page('/recette/galette-seche', cookie));
+    assert.match(galette, /data-status="warn"/);
+    assert.match(galette, /pas encore vérifiée/);
+    await t.req('/recette/galette-seche/conforme', { method: 'POST', body: t.form({ conforme: '1' }), headers: { cookie } });
+    const ok = toggle(await page('/recette/galette-seche', cookie));
+    assert.match(ok, /data-status="ok"/);
+    assert.match(ok, /icon-check/);
+  });
+});

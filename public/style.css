@@ -474,8 +474,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .filters-panel .people .person .count { color: var(--muted); font-size: .85em; }
 
 /* Relecture par la famille (page recette) : questions, case « Conforme », signalement */
-.revue { margin-top: 32px; padding-top: 16px; border-top: 1px dashed var(--border); }
-.revue h2 { margin-bottom: 8px; }
 .revue h3 { font-size: 1rem; margin: 16px 0 8px; }
 .revue .threads { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; }
 .revue .thread { padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; }
@@ -492,3 +490,63 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .revue .report summary { color: var(--muted); }
 .site-footer .account { margin: 0 0 6px; }
 .site-footer .account .link-button { padding: 0; font-size: inherit; }
+
+/* Page recette en trois colonnes : fiche d'origine | recette | relecture.
+   Colonnes latérales repliées par défaut ; leur bouton reprend celui du panneau de filtres (en miroir à droite). */
+:root { --ok: #2f7d4a; --warn: #b7791f; }
+.side-toggle {
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer;
+  color: var(--accent); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px;
+  transition: background .15s, border-color .15s;
+}
+.side-toggle:hover { background: var(--accent-soft); }
+.side-toggle[aria-expanded="true"] { background: var(--accent-soft); border-color: transparent; }
+.side-status { display: inline-flex; }
+.side-toggle[data-status="ok"] .side-status { color: var(--ok); }
+.side-toggle[data-status="warn"] .side-status { color: var(--warn); }
+.side[data-open="false"] .side-panel { display: none; }
+.side-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 2px 16px 16px;
+}
+.side-panel > h2 { font-size: 1.1rem; margin: 14px 0 10px; }
+.originals-panel img { border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 10px; }
+.originals-panel a:last-child img { margin-bottom: 0; }
+
+/* Petit écran : les deux boutons sur une ligne au-dessus de la recette, panneaux dépliés en dessous */
+@media (max-width: 999px) {
+  .recipe-layout {
+    display: grid; grid-template-columns: auto 1fr auto; column-gap: 8px;
+    grid-template-areas: "lt . rt" "lp lp lp" "rp rp rp" "main main main";
+  }
+  .side { display: contents; }
+  .side-left > .side-toggle { grid-area: lt; }
+  .side-left > .side-panel { grid-area: lp; }
+  .side-right > .side-toggle { grid-area: rt; }
+  .side-right > .side-panel { grid-area: rp; }
+  .recipe-center { grid-area: main; min-width: 0; margin-top: 8px; }
+  .side-toggle { margin-top: 12px; }
+  .side-panel { margin-top: 10px; }
+}
+
+/* Grand écran : rails fins à gauche et à droite (bouton vertical), panneaux épinglés en se dépliant */
+@media (min-width: 1000px) {
+  .page-recipe main { max-width: 1560px; }
+  .recipe-layout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 20px; align-items: start; }
+  .recipe-center > .recipe { max-width: 728px; margin: 0 auto; }
+  .side { position: sticky; top: 76px; display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; }
+  .side-right { flex-direction: row-reverse; }
+  .side-empty { width: 46px; }
+  .side-toggle { flex-direction: column; gap: 10px; width: 46px; padding: 12px 0 14px; }
+  /* Libellé vertical : de bas en haut à gauche, de haut en bas à droite (en miroir). « sideways » garde
+     la ponctuation (apostrophe) dans le sens du texte ; repli sur vertical-rl + rotation sinon. */
+  .side-label { writing-mode: vertical-rl; letter-spacing: .02em; }
+  .side-left .side-label { transform: rotate(180deg); }
+  @supports (writing-mode: sideways-lr) {
+    .side-left .side-label { writing-mode: sideways-lr; transform: none; }
+    .side-right .side-label { writing-mode: sideways-rl; }
+  }
+  .side-right .side-status { order: -1; } /* statut en tête du rail : visible d'un coup d'œil */
+  .side-panel { width: 340px; max-height: calc(100vh - 92px); overflow: auto; }
+}
+@media (min-width: 1300px) { .side-panel { width: 380px; } }

@@ -243,7 +243,7 @@ function relatedHtml(related) {
 
 const asText = v => (Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v ? v.name || '' : String(v));
 
-function recipeArticle(r, { back = true } = {}) {
+function recipeArticle(r, { back = true, originals = true } = {}) {
   const m = r.meta;
   const servings = Number(m.servings) || null;
   // Clé maison « servings unit » (bouchons, cookies, parts…) ; sinon des personnes.
@@ -311,7 +311,7 @@ function recipeArticle(r, { back = true } = {}) {
     ${r.items.map(itemHtml).join('\n')}
   </section>
 
-  ${r.originals.length ? `<details class="originals">
+  ${originals && r.originals.length ? `<details class="originals">
     <summary>Voir la fiche d'origine</summary>
     ${r.originals.map(o => `<a href="/photos/${enc(o)}"><img src="/photos/${enc(o)}" alt="Fiche d'origine" loading="lazy"></a>`).join('')}
   </details>` : ''}
@@ -368,7 +368,7 @@ function reviewHtml(r, { account, merci, error }) {
     </form>
   </details>`;
 
-  return `<section class="revue" id="revue">
+  return `<section class="side-panel revue" id="revue">
   <h2>Relecture</h2>
   ${MERCI[merci] ? `<p class="flash">${MERCI[merci]}</p>` : ''}
   ${error ? `<p class="error">${esc(error)}</p>` : ''}
@@ -378,8 +378,43 @@ function reviewHtml(r, { account, merci, error }) {
 </section>`;
 }
 
+// État de la relecture, visible même panneau replié : ✓ si vérifiée sans question, ⚠ sinon.
+function reviewStatus(r) {
+  const n = r.threads.length;
+  const problems = [n && `${n} question${n > 1 ? 's' : ''} en suspens`, !r.meta.verifie && 'pas encore vérifiée conforme'].filter(Boolean);
+  return problems.length
+    ? { status: 'warn', icon: icon('alert', 20), label: problems.join(' · ') }
+    : { status: 'ok', icon: icon('check', 20), label: `tout est bon (vérifiée : ${asText(r.meta.verifie)})` };
+}
+
+// Bouton d'une colonne latérale : même icône que le panneau de filtres (en miroir à droite).
+const sideToggle = (id, iconName, label, extra = '') =>
+  `<button type="button" class="side-toggle" aria-controls="${id}" aria-expanded="false"${extra}>${icon(iconName)}<span class="side-label">${label}</span>`;
+
+// Page recette en trois colonnes, repliées par défaut : fiche d'origine | recette | relecture.
+// La relecture s'ouvre d'elle-même après une action (message de confirmation ou erreur).
 function recipe({ r, theme, account = null, merci = '', error = '' }) {
-  return layout({ title: r.title, theme, account, body: recipeArticle(r) + reviewHtml(r, { account, merci, error }), bodyClass: 'page-recipe' });
+  const st = reviewStatus(r);
+  const reviewOpen = Boolean(MERCI[merci] || error);
+  const left = r.originals.length
+    ? `<div class="side side-left" data-open="false">
+    ${sideToggle('cote-original', 'sidebar', 'Fiche d’origine', ' title="Fiche d’origine"')}</button>
+    <section class="side-panel originals-panel" id="cote-original">
+      <h2>Fiche d’origine</h2>
+      ${r.originals.map(o => `<a href="/photos/${enc(o)}" target="_blank"><img src="/photos/${enc(o)}" alt="Fiche d’origine" loading="lazy"></a>`).join('')}
+    </section>
+  </div>`
+    : '<div class="side side-left side-empty"></div>';
+  const right = `<div class="side side-right" data-open="${reviewOpen}">
+    ${sideToggle('revue', 'sidebarRight', 'Relecture', ` title="Relecture : ${esc(st.label)}" data-status="${st.status}"`).replace('aria-expanded="false"', `aria-expanded="${reviewOpen}"`)}<span class="side-status">${st.icon}</span></button>
+    ${reviewHtml(r, { account, merci, error })}
+  </div>`;
+  const body = `<div class="recipe-layout">
+  ${left}
+  <div class="recipe-center">${recipeArticle(r, { originals: false })}</div>
+  ${right}
+</div>`;
+  return layout({ title: r.title, theme, account, body, bodyClass: 'page-recipe' });
 }
 
 function proposeForm({ theme, account, error, values = {} }) {
