@@ -529,14 +529,15 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
   .side-panel { margin-top: 10px; }
 }
 
-/* Grand écran : rails fins à gauche et à droite (bouton vertical), panneaux épinglés en se dépliant */
+/* Grand écran : colonnes latérales flottantes. Rails fixés aux bords de l'écran ; un panneau se déplie
+   par-dessus la page, sans jamais décaler la recette (qui reste centrée). S'il y a la place, il ne la recouvre pas. */
 @media (min-width: 1000px) {
-  .page-recipe main { max-width: 1560px; }
-  .recipe-layout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 20px; align-items: start; }
+  .page-recipe main { max-width: none; padding-left: 88px; padding-right: 88px; }
   .recipe-center > .recipe { max-width: 728px; margin: 0 auto; }
-  .side { position: sticky; top: 76px; display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; }
-  .side-right { flex-direction: row-reverse; }
-  .side-empty { width: 46px; }
+  .side { position: fixed; top: var(--side-top, 76px); z-index: 5; display: flex; align-items: flex-start; gap: 12px; }
+  .side-left { left: 16px; }
+  .side-right { right: 16px; flex-direction: row-reverse; }
+  .side-empty { display: none; }
   .side-toggle { flex-direction: column; gap: 10px; width: 46px; padding: 12px 0 14px; }
   /* Libellé vertical : de bas en haut à gauche, de haut en bas à droite (en miroir). « sideways » garde
      la ponctuation (apostrophe) dans le sens du texte ; repli sur vertical-rl + rotation sinon. */
@@ -547,6 +548,9 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
     .side-right .side-label { writing-mode: sideways-rl; }
   }
   .side-right .side-status { order: -1; } /* statut en tête du rail : visible d'un coup d'œil */
-  .side-panel { width: 340px; max-height: calc(100vh - 92px); overflow: auto; }
+  .side-panel {
+    width: 360px; max-height: calc(100vh - var(--side-top, 76px) - 16px); overflow: auto;
+    box-shadow: var(--shadow), 0 12px 32px rgb(40 30 20 / .14);
+  }
 }
-@media (min-width: 1300px) { .side-panel { width: 380px; } }
+@media (min-width: 1400px) { .side-panel { width: 400px; } }

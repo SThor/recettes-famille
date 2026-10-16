@@ -255,3 +255,35 @@ test.describe('Page recette en trois colonnes (fiche d\'origine | recette | rele
     assert.match(ok, /icon-check/);
   });
 });
+
+test.describe('Personnes d\'une recette sans doublon', () => {
+  const { peopleOf } = require('../src/recipes');
+  test('peopleOf : même prénom en auteur et en origine (casse ou espaces différents) → une seule fois', () => {
+    assert.deepEqual(peopleOf({ meta: { author: 'Carole', from: ' carole ' } }), ['Carole']);
+    assert.deepEqual(peopleOf({ meta: { author: 'Maman', from: ['Carole', 'maman'] } }), ['Maman', 'Carole']);
+  });
+
+  test('relecture : « Idéalement cochée par Carole », pas « Carole ou Carole »', async () => {
+    const t = await startApp();
+    try {
+      require('fs').writeFileSync(require('path').join(t.recipesDir, 'Gâteau au yaourt.cook'),
+        '---\ntitle: Gâteau au yaourt\nauthor: Carole\nfrom: Carole\n---\n\nMélanger.\n');
+      const cookie = (await t.req(`/entrer?cle=${FAMILY}`)).headers.get('set-cookie').split(';')[0];
+      const html = await (await t.req('/recette/gateau-au-yaourt', { headers: { cookie } })).text();
+      assert.match(html, /Idéalement cochée par Carole\./);
+      assert.doesNotMatch(html, /Carole ou Carole/);
+    } finally { await t.close(); }
+  });
+});
+
+test.describe('Colonnes latérales flottantes (grand écran)', () => {
+  const css = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'style.css'), 'utf8');
+  const desktop = css.slice(css.indexOf('/* Grand écran : colonnes latérales'));
+  test('rails fixés aux bords de l\'écran, panneaux par-dessus : la recette ne bouge pas', () => {
+    assert.ok(desktop.length < css.length, 'bloc CSS « Grand écran : colonnes latérales » introuvable');
+    assert.match(desktop, /\.side \{[^}]*position: fixed/);
+    assert.match(desktop, /\.side-left \{[^}]*left: 16px/);
+    assert.match(desktop, /\.side-right \{[^}]*right: 16px/);
+    assert.doesNotMatch(desktop, /\.recipe-layout \{[^}]*grid/); // plus de colonnes qui poussent la recette
+  });
+});

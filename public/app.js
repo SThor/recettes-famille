@@ -386,7 +386,8 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
 })();
 
 // Page recette : colonnes latérales (fiche d'origine, relecture) repliées par défaut.
-// Écran moyen : une seule ouverte à la fois, pour garder la recette lisible.
+// Les panneaux flottent par-dessus la page : en dessous de 1500 px, un seul ouvert à la fois
+// pour garder la recette lisible ; Échap les referme.
 (() => {
   const sides = [...document.querySelectorAll('.side:not(.side-empty)')];
   if (!sides.length) return;
@@ -397,10 +398,13 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
   for (const side of sides) {
     side.querySelector('.side-toggle').addEventListener('click', () => {
       const open = side.dataset.open !== 'true';
-      if (open && matchMedia('(min-width: 1000px) and (max-width: 1299px)').matches) {
+      if (open && matchMedia('(min-width: 1000px) and (max-width: 1499px)').matches) {
         sides.filter(s => s !== side).forEach(s => set(s, false));
       }
       set(side, open);
     });
   }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') sides.filter(s => s.dataset.open === 'true').forEach(s => set(s, false));
+  });
 })();
