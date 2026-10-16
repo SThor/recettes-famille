@@ -8,7 +8,7 @@ const views = require('./views');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
 const { fontsRouter } = require('./fonts');
-const { answerQuestion, reportError, cleanName } = require('./revue');
+const { answerQuestion, reportError, cleanName, REVIEW_STATES, reviewStateOf } = require('./revue');
 const { setField } = require('./frontmatter');
 const { writeAtomic, today } = require('./files');
 
@@ -109,10 +109,12 @@ function createApp({
     const tag = param('tag');
     const regime = param('regime');
     const personne = param('personne');
+    const relecture = REVIEW_STATES.some(([k]) => k === param('relecture')) ? param('relecture') : '';
     const duree = /^\d{1,4}$/.test(param('duree')) && Number(param('duree')) > 0 ? Number(param('duree')) : null;
     const temps = param('temps') === 'prep' ? 'prep' : 'total';
     const has = (values, wanted) => values.some(x => normValue(x) === normValue(wanted));
-    const base = r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime)) && (!personne || has(peopleOf(r), personne));
+    const base = r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime)) && (!personne || has(peopleOf(r), personne))
+      && (!relecture || reviewStateOf(r) === relecture);
     const minutes = r => (temps === 'prep' ? r.durations.prep : r.durations.total);
     // Les recettes hors durée restent dans la page, masquées : le curseur peut les réafficher en direct.
     const groups = store.grouped(base);
@@ -120,8 +122,8 @@ function createApp({
     // Recettes écartées faute de durée renseignée (signalées sous le bandeau).
     const unknown = duree ? store.all().filter(r => base(r) && minutes(r) == null).length : 0;
     // Paramètres de filtre actuels, dans l'ordre de l'URL (pour construire les liens).
-    const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'personne', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
-    res.send(views.home({ account: req.account, groups, fits, theme: req.theme, tag, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
+    const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'personne', 'relecture', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
+    res.send(views.home({ account: req.account, relecture, reviews: REVIEW_STATES.map(([key, label]) => ({ key, label, count: store.all().filter(r => reviewStateOf(r) === key).length })), groups, fits, theme: req.theme, tag, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
   });
 
   app.get('/recette/:slug', (req, res) => {

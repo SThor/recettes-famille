@@ -554,3 +554,21 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
   }
 }
 @media (min-width: 1400px) { .side-panel { width: 400px; } }
+
+/* Relecture sur l'accueil : icône dans le titre des cartes, bloc de filtre dans le panneau */
+.card-review { float: right; margin: 2px 0 0 8px; line-height: 0; }
+.card-review[data-state="ok"] { color: var(--ok); }
+.card-review[data-state="questions"] { color: var(--warn); }
+.filters-panel .review-filter { margin: 0; padding: 10px 0; border-top: 1px solid var(--border); }
+.filters-panel .review-filter .tags { margin: 8px 0 0; }
+.filters-panel .review-filter .review {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap;
+}
+.filters-panel .review-filter .review .count { color: var(--muted); font-size: .85em; }
+.filters-panel .review-filter .review[data-state="ok"] .icon { color: var(--ok); }
+.filters-panel .review-filter .review[data-state="questions"] .icon { color: var(--warn); }
+.filters-panel .review-filter .review[aria-current="true"] { outline: 1.5px solid var(--accent); }
+.filter-pill .icon-check { color: var(--ok); }
+.filter-pill .icon-alert { color: var(--warn); }
+.filters-panel .review-filter .review[data-state="a-verifier"] .icon, .filter-pill .icon-circle { color: var(--muted); }

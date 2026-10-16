@@ -6,6 +6,8 @@ const PATHS = {
   sidebarRight: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
   // Statut de relecture : tout est bon / quelque chose à revoir
   check: '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16.5 9.5"/>',
+  // Cercle vide : pas encore vérifiée
+  circle: '<circle cx="12" cy="12" r="9"/>',
   alert: '<path d="M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/>',
   // Étiquette
   tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',

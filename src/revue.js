@@ -74,4 +74,13 @@ function cleanName(s) {
   return name.charAt(0).toLocaleUpperCase('fr') + name.slice(1);
 }
 
-module.exports = { questionsOf, threadsOf, answerQuestion, reportError, cleanName, oneLine };
+// État de relecture d'une recette (cartes, filtre de l'accueil, page recette) :
+// 'ok' = vérifiée sans question, 'questions' = au moins une question en suspens, 'a-verifier' sinon.
+const REVIEW_STATES = [
+  ['ok', 'Vérifiées'],
+  ['questions', 'Questions à résoudre'],
+  ['a-verifier', 'Pas encore vérifiées'],
+];
+const reviewStateOf = r => (r.threads.length ? 'questions' : r.meta.verifie ? 'ok' : 'a-verifier');
+
+module.exports = { REVIEW_STATES, reviewStateOf, questionsOf, threadsOf, answerQuestion, reportError, cleanName, oneLine };

@@ -110,7 +110,7 @@
 /* Coins carrés pour toutes les pastilles (étiquettes, régimes, durées, filtres actifs) */
 .theme-vichy .filters-panel .diets .diet, .theme-vichy .duree-preset, .theme-vichy .filter-pill, .theme-vichy .card-fact { border-radius: 2px; }
 .theme-vichy .pill-remove { border-radius: 2px; }
-.theme-vichy .filters-panel .people .person { border-radius: 2px; }
+.theme-vichy .filters-panel .people .person, .theme-vichy .filters-panel .review-filter .review { border-radius: 2px; }
 
 /* Colonnes latérales de la page recette : sous l'en-tête plus haut, titres manuscrits comme « Ingrédients » */
 .theme-vichy { --side-top: 90px; }

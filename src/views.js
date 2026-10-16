@@ -1,6 +1,7 @@
 const { slugify, peopleOf } = require('./recipes');
 const { toSeconds, formatMinutes } = require('./durations');
 const { icon } = require('./icons');
+const { REVIEW_STATES, reviewStateOf } = require('./revue');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
 const ASSET_V = Date.now().toString(36);
 
@@ -75,6 +76,21 @@ function cardFacts(r) {
   return facts.length ? `<span class="card-facts">${facts.map(f => `<span class="card-fact">${f}</span>`).join('')}</span>` : '';
 }
 
+// Icône de relecture d'une carte : ✓ vérifiée sans question, ⚠ questions à résoudre ;
+// rien pour une recette simplement pas encore vérifiée (le cas le plus courant : pas de bruit).
+const CARD_REVIEW = {
+  ok: ['check', 'Vérifiée conforme à l’original'],
+  questions: ['alert', 'Questions à résoudre'],
+};
+// Icône de chaque état dans le panneau de filtres et la pastille.
+const REVIEW_ICON = { ok: 'check', questions: 'alert', 'a-verifier': 'circle' };
+function cardReview(r) {
+  const state = reviewStateOf(r);
+  if (!CARD_REVIEW[state]) return '';
+  const [name, label] = CARD_REVIEW[state];
+  return `<span class="card-review" data-state="${state}" title="${label}" role="img" aria-label="${label}">${icon(name, 16)}</span>`;
+}
+
 function card(r, visible = true) {
   // Recherche libre : titre, ingrédients, étiquettes, personnes (rapporteur + origine) et source.
   const search = [r.title, ...r.ingredients.map(i => i.name), ...r.tags, ...peopleOf(r), r.meta.source && asText(r.meta.source)].filter(Boolean).join(' ').toLowerCase();
@@ -82,7 +98,7 @@ function card(r, visible = true) {
   return `<li class="card"${visible ? '' : ' hidden'} data-search="${esc(search)}" data-prep="${d.prep ?? ''}" data-total="${d.total ?? ''}">
   <a href="/recette/${r.slug}">
     ${r.photo ? `<img src="/photos/${enc(r.photo)}" alt="" loading="lazy">` : ''}
-    <span class="card-title">${esc(r.title)}</span>
+    <span class="card-title">${esc(r.title)}${cardReview(r)}</span>
     ${r.meta.author ? `<span class="card-meta">de ${esc(r.meta.author)}</span>` : ''}
     ${cardFacts(r)}
   </a>
@@ -109,7 +125,7 @@ function homeUrl(params, changes = {}) {
   return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
 }
 
-function home({ account, groups, fits = () => true, theme, tag = '', regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
+function home({ account, relecture = '', reviews = [], groups, fits = () => true, theme, tag = '', regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
 
@@ -118,6 +134,7 @@ function home({ account, groups, fits = () => true, theme, tag = '', regime = ''
   const active = [
     regime && ['leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
     personne && ['person', `Personne : <b>${esc(personne)}</b>`, { personne: null }],
+    relecture && [REVIEW_ICON[relecture], `Relecture : <b>${esc((REVIEW_STATES.find(([k]) => k === relecture) || [])[1])}</b>`, { relecture: null }],
     tag && ['tag', `Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
     duree && ['timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
@@ -139,6 +156,11 @@ function home({ account, groups, fits = () => true, theme, tag = '', regime = ''
   const dietRow = diets.length ? `<details class="diets"${regime ? ' open' : ''}>
     <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
     <div class="tags">${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join('')}</div>
+  </details>` : '';
+  // Relecture : vérifiées / questions à résoudre / pas encore vérifiées (mêmes icônes que les cartes).
+  const reviewRow = reviews.length ? `<details class="review-filter"${relecture ? ' open' : ''}>
+    <summary class="filter-title">${icon('check', 16)} Relecture</summary>
+    <div class="tags">${reviews.map(x => `<a class="review" data-state="${x.key}" href="${esc(homeUrl(params, { relecture: x.key }))}"${x.key === relecture ? ' aria-current="true"' : ''}>${icon(REVIEW_ICON[x.key], 14)}${esc(x.label)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
   const tagCloud = tags.length ? `<details class="tag-cloud"${tag ? ' open' : ''}>
     <summary class="filter-title">${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
@@ -169,6 +191,7 @@ ${resultsHead}
   ${dietRow}
   ${dureeBlock}
   ${tagCloud}
+  ${reviewRow}
   <button type="button" class="button filters-apply">Voir <span id="filters-count">${recettes(count)}</span></button>
 </aside>
 <div class="home-results">
@@ -380,7 +403,7 @@ function reviewHtml(r, { account, merci, error }) {
 
 // État de la relecture, visible même panneau replié : ✓ si vérifiée sans question, ⚠ sinon.
 function reviewStatus(r) {
-  const n = r.threads.length;
+  const n = r.threads.length; // ✓ ssi reviewStateOf(r) === 'ok'
   const problems = [n && `${n} question${n > 1 ? 's' : ''} en suspens`, !r.meta.verifie && 'pas encore vérifiée conforme'].filter(Boolean);
   return problems.length
     ? { status: 'warn', icon: icon('alert', 20), label: problems.join(' · ') }
