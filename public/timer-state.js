@@ -65,6 +65,13 @@
     return `Vérifier dans ${clock(left - (t.total - t.check))}${pause}`;
   }
 
+  // Boutons du bandeau : « Rappel dans 2 minutes » entre les deux bornes (s'il reste plus de 2 min,
+  // sinon l'alarme suffit) ; « +1 min » une fois terminé. L'arrêt (✕) est toujours là.
+  function trayActions(t, now) {
+    if (t.done) return ['plus1'];
+    return phase(t, now) === 'surveiller' && leftOf(t, now) > SNOOZE ? ['rappel'] : [];
+  }
+
   // Barre de progression : part écoulée, et début de la zone « à surveiller » (fraction) pour une plage.
   const progress = (t, now) => ({
     done: t.total ? (t.total - leftOf(t, now)) / t.total : 1,
@@ -99,5 +106,5 @@
     }).filter(t => !t.done || now - (t.endedAt || now) <= FORGET_AFTER);
   }
 
-  return { storageKey, clock, create, leftOf, phase, dueCheck, ackCheck, snooze, addTime, trayText, progress, serialize, restore };
+  return { storageKey, clock, create, leftOf, phase, dueCheck, ackCheck, snooze, addTime, trayText, trayActions, progress, serialize, restore };
 });

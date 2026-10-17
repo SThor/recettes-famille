@@ -280,9 +280,10 @@ if (recipe) {
     };
     tray.replaceChildren(...[...timers].map(([btn, t]) => {
       const watch = TimerState.phase(t, now) === 'surveiller';
+      const actions = TimerState.trayActions(t, now);
       const row = document.createElement('div');
       row.className = `timer-row${t.done ? ' done' : ''}${watch ? ' watch' : ''}`;
-      // Ligne 1 : nom (va à l'étape), temps (pause / reprise), +1 min, arrêt.
+      // Ligne 1 : nom (va à l'étape), temps (pause / reprise), +1 min une fois terminé, arrêt.
       const line = document.createElement('div');
       line.className = 'timer-line';
       const close = button('timer-stop', '✕', () => stop(btn));
@@ -290,7 +291,7 @@ if (recipe) {
       line.append(
         button('timer-name', t.label, () => btn.scrollIntoView({ behavior: 'smooth', block: 'center' }), 'Voir l’étape'),
         button('timer-time', TimerState.trayText(t, now), () => toggle(btn), t.done ? 'Arrêter' : t.endAt ? 'Mettre en pause' : 'Reprendre'),
-        button('timer-more', '+1 min', () => addMinute(btn), 'Ajouter une minute'),
+        ...(actions.includes('plus1') ? [button('timer-more', '+1 min', () => addMinute(btn), 'Ajouter une minute')] : []),
         close,
       );
       // Ligne 2 : progression, avec la zone « à surveiller » d'une plage.
@@ -308,12 +309,12 @@ if (recipe) {
       fill.style.width = `${Math.min(1, done) * 100}%`;
       bar.append(fill);
       row.append(line, bar);
-      // Ligne 3, entre les deux bornes : « C'est prêt » ou « Encore 2 min ».
-      if (watch) {
-        const actions = document.createElement('div');
-        actions.className = 'timer-actions';
-        actions.append(button('timer-ready', 'C’est prêt', () => stop(btn)), button('timer-snooze', 'Encore 2 min', () => snooze(btn)));
-        row.append(actions);
+      // Ligne 3, entre les deux bornes : nouveau rappel doux dans 2 minutes.
+      if (actions.includes('rappel')) {
+        const more = document.createElement('div');
+        more.className = 'timer-actions';
+        more.append(button('timer-snooze', 'Rappel dans 2 minutes', () => snooze(btn)));
+        row.append(more);
       }
       return row;
     }));

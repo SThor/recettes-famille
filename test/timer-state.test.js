@@ -126,3 +126,17 @@ test.describe('Minuteurs à plage et ajouts de temps', () => {
     assert.equal(old.nextCheck, null);
   });
 });
+
+test.describe('Boutons du bandeau selon l\'état', () => {
+  const S = 1000;
+  const { create, leftOf, trayActions } = require('../public/timer-state');
+  const run = (t, at) => ({ ...t, endAt: at + leftOf(t, at) * S });
+  test('« Rappel dans 2 minutes » seulement à surveiller et s\'il reste plus de 2 min ; « +1 min » seulement une fois terminé', () => {
+    const range = run(create({ label: 'c', seconds: 600, secondsMax: 900 }), NOW);
+    assert.deepEqual(trayActions(range, NOW + 300 * S), []);              // avant la borne basse
+    assert.deepEqual(trayActions(range, NOW + 650 * S), ['rappel']);      // à surveiller, reste 250 s
+    assert.deepEqual(trayActions(range, NOW + 800 * S), []);              // reste 100 s : l'alarme suffit
+    assert.deepEqual(trayActions(run(create({ label: 'r', seconds: 600 }), NOW), NOW + 590 * S), []); // simple, en cours
+    assert.deepEqual(trayActions({ ...range, done: true, endAt: null, remaining: 0 }, NOW + 900 * S), ['plus1']);
+  });
+});
