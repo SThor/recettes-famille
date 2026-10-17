@@ -572,3 +572,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .filter-pill .icon-check { color: var(--ok); }
 .filter-pill .icon-alert { color: var(--warn); }
 .filters-panel .review-filter .review[data-state="a-verifier"] .icon, .filter-pill .icon-circle { color: var(--muted); }
+
+/* Avertissements de l'aperçu (ex. référence @& introuvable) */
+.warning { background: #fdf3e1; color: #7a4a06; padding: 8px 12px; border-radius: var(--radius); margin: 0 0 8px; font-size: .9rem; }

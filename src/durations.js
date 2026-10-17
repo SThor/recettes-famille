@@ -13,8 +13,8 @@ function toNumber(q) {
 }
 
 function toSeconds(quantity, unit) {
-  // Plage « 25-30 » : on part de la durée la plus courte (on peut relancer si besoin).
-  const q = String(quantity || '').trim().split(/\s*-\s*/)[0];
+  // Plage « 25-30 » ou « 25 à 30 » : on part de la durée la plus courte (on peut relancer si besoin).
+  const q = String(quantity || '').trim().split(/\s*-\s*|\s+à\s+/)[0];
   const value = q ? toNumber(q) : null;
   const u = String(unit || '').trim().toLowerCase();
   const factor = UNITS.find(([re]) => re.test(u))?.[1];

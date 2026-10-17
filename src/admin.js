@@ -82,7 +82,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   // --- Aperçu (utilisé par l'éditeur) ---
   router.post('/apercu', express.json({ limit: '1mb' }), (req, res) => {
     try {
-      res.send(views.recipeArticle(fromSource(String(req.body.source || ''), 'apercu.cook', null), { back: false }));
+      res.send(previewHtml(req.body.source));
     } catch (err) {
       res.status(400).send(`<p class="error">${views.esc(err.message)}</p>`);
     }
@@ -110,7 +110,9 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
   // Aperçu rendu côté serveur (affiché dès l'ouverture de l'éditeur).
   function previewHtml(source) {
     try {
-      return views.recipeArticle(fromSource(String(source || ''), 'apercu.cook', null), { back: false });
+      const r = fromSource(String(source || ''), 'apercu.cook', null);
+      // Erreurs Cooklang (ex. référence @& introuvable) en tête de l'aperçu.
+      return r.problems.map(p => `<p class="warning">⚠ ${views.esc(p)}</p>`).join('') + views.recipeArticle(r, { back: false });
     } catch (err) {
       return `<p class="error">${views.esc(err.message)}</p>`;
     }

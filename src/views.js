@@ -52,6 +52,7 @@ ${body}
   </p>
 </footer>
 <script src="/static/timer-state.js?v=${ASSET_V}" defer></script>
+<script src="/static/quantites.js?v=${ASSET_V}" defer></script>
 <script src="/static/app.js?v=${ASSET_V}" defer></script>
 </body>
 </html>`;
@@ -220,10 +221,12 @@ ${resultsHead}
   return layout({ title: 'Accueil', theme, account, body, bodyClass: 'page-home' });
 }
 
-// Quantité affichée ; data-v permet de la recalculer selon les portions (sauf quantité fixe « = »).
+// Quantité affichée ; data-v (et data-v2, borne haute d'une plage) permettent de la recalculer
+// selon les portions (public/quantites.js), sauf quantité fixe « = ».
 function fmtAmount(a) {
   const qty = a.fixed
     ? `<span class="qty fixed">${esc(a.quantity)}</span>`
+    : a.range ? `<span class="qty" data-v="${a.range[0]}" data-v2="${a.range[1]}">${esc(a.quantity)}</span>`
     : a.value != null ? `<span class="qty" data-v="${a.value}">${esc(a.quantity)}</span>` : esc(a.quantity);
   return `${qty}${a.unit ? `&nbsp;${esc(a.unit)}` : ''}`;
 }

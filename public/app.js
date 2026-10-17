@@ -89,19 +89,12 @@ if (recipe) {
   const base = Number(recipe.dataset.servings);
   let current = base;
   const count = document.getElementById('servings-count');
-  const fmt = v => {
-    const fractions = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
-    const whole = Math.floor(v);
-    const rest = Math.round((v - whole) * 100) / 100;
-    if (fractions[rest]) return (whole || '') + fractions[rest];
-    return String(Math.round(v * 10) / 10).replace('.', ',');
-  };
   recipe.querySelectorAll('.servings button').forEach(btn => btn.addEventListener('click', () => {
     current = Math.max(1, current + Number(btn.dataset.step));
     count.textContent = current;
     const unit = document.getElementById('servings-unit');
     if (unit) unit.textContent = current === 1 ? unit.dataset.one : unit.dataset.many;
-    recipe.querySelectorAll('.qty[data-v]').forEach(el => { el.textContent = fmt(Number(el.dataset.v) * current / base); });
+    recipe.querySelectorAll('.qty[data-v]').forEach(el => { el.textContent = Quantites.scaled(el.dataset, current / base); });
   }));
 }
 

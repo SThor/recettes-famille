@@ -5,6 +5,7 @@
 //           ustensiles, minuteurs (nommés ou non).
 const fs = require('fs');
 const YAML = require('yaml');
+const { toSeconds } = require('./durations');
 const wasmGlue = require('@cooklang/cooklang/pkg/cooklang_wasm_bg.js');
 
 // Le paquet est compilé pour les bundlers (import de .wasm) : on instancie le module nous-mêmes,
@@ -24,13 +25,14 @@ function splitFrontmatter(src) {
 }
 
 // Valeur d'une quantité officielle → texte affiché et nombre (pour recalculer les portions).
+// Plage « 1-2 » → texte « 1 à 2 » et range: [1, 2] (les deux bornes suivent les portions).
 function readValue(v) {
   if (!v) return { text: '', number: null };
   if (v.type === 'text') return { text: String(v.value), number: null };
   if (v.type === 'range') {
     const a = readValue({ type: 'number', value: v.value.start });
     const b = readValue({ type: 'number', value: v.value.end });
-    return { text: `${a.text}-${b.text}`, number: null };
+    return { text: `${a.text} à ${b.text}`, number: null, range: [a.number, b.number] };
   }
   const n = v.value; // { type: 'regular', value } | { type: 'fraction', value: { whole, num, den } }
   if (n.type === 'fraction') {
@@ -42,8 +44,24 @@ function readValue(v) {
 
 function readQuantity(q) {
   if (!q) return { quantity: '', unit: '', value: null, fixed: false };
-  const { text, number } = readValue(q.value);
-  return { quantity: text, unit: q.unit || '', value: number, fixed: q.scalable === false };
+  const { text, number, range } = readValue(q.value);
+  return { quantity: text, unit: q.unit || '', value: number, ...(range && { range }), fixed: q.scalable === false };
+}
+
+// Erreurs du parseur officiel (texte du rapport, sans la mise en forme HTML), en clair pour l'admin.
+// « Reference not found » = un @&nom sans @nom défini plus haut (exigé par la spec).
+function problemsOf(report) {
+  const text = String(report || '').replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  const problems = [];
+  for (const [, msg] of text.matchAll(/^Error: (.+)$/gm)) {
+    // Unités françaises (heure, secondes…) inconnues du parseur officiel mais comprises par nos minuteurs.
+    const unit = msg.match(/^Unknown timer unit: (.+)$/);
+    if (unit && toSeconds(1, unit[1])) continue;
+    const ref = msg.match(/^Reference not found: (.+)$/);
+    problems.push(ref ? `Référence @&${ref[1]} introuvable : il faut un @${ref[1]} plus haut dans la recette.` : `Cooklang : ${msg}`);
+  }
+  return problems;
 }
 
 // Le parseur officiel ne dit pas si un ingrédient est facultatif (@?nom) : on le relève dans le texte.
@@ -70,7 +88,7 @@ function noteLines(body) {
 function parse(src) {
   src = src.replace(/^﻿/, '');
   const { meta, body } = splitFrontmatter(src); // lève une erreur si l'en-tête YAML est invalide
-  const { recipe } = parser.parse(src);
+  const { recipe, report } = parser.parse(src);
   const optional = optionalNames(body);
   const sourceNotes = noteLines(body.replace(/\[-[\s\S]*?-\]/g, ''));
 
@@ -120,19 +138,30 @@ function parse(src) {
       if (p.type === 'cookware' && !cookware.some(c => c.toLowerCase() === p.name.toLowerCase())) cookware.push(p.name);
     }
   }
-  return { meta, items, ingredients, cookware };
+  return { meta, items, ingredients, cookware, problems: problemsOf(report) };
 }
 
-// Regroupe les ingrédients du même nom ; additionne si même unité et quantités numériques
-// (une quantité fixe ne s'additionne qu'avec une autre quantité fixe).
+// Bornes d'une quantité numérique : [n, n] ou [début, fin] d'une plage ; null si non numérique.
+const boundsOf = a => (a.range ? a.range : a.value != null ? [a.value, a.value] : null);
+
+// Regroupe les ingrédients du même nom ; additionne si même unité et quantités numériques, plages
+// comprises (100 g + 200 à 400 g = 300 à 500 g). Une quantité fixe ne s'additionne qu'avec une fixe.
 function addIngredient(list, p) {
   let ing = list.find(i => i.name.toLowerCase() === p.name.toLowerCase() && i.ref === p.ref);
   if (!ing) list.push(ing = { name: p.name, optional: p.optional, ref: p.ref, notes: [], amounts: [] });
   if (p.note && !ing.notes.includes(p.note)) ing.notes.push(p.note);
   if (!p.quantity) return;
-  const same = ing.amounts.find(a => a.unit === p.unit && a.fixed === p.fixed && a.value != null && p.value != null);
-  if (same) { same.value += p.value; same.quantity = String(same.value); }
-  else ing.amounts.push({ quantity: p.quantity, unit: p.unit, value: p.value, fixed: p.fixed });
+  const same = boundsOf(p) && ing.amounts.find(a => a.unit === p.unit && a.fixed === p.fixed && boundsOf(a));
+  if (!same) {
+    ing.amounts.push({ quantity: p.quantity, unit: p.unit, value: p.value, ...(p.range && { range: p.range }), fixed: p.fixed });
+    return;
+  }
+  const [a, b] = boundsOf(same);
+  const [c, d] = boundsOf(p);
+  const isRange = Boolean(same.range || p.range);
+  same.value = isRange ? null : a + c;
+  if (isRange) { same.range = [a + c, b + d]; same.quantity = `${a + c} à ${b + d}`; }
+  else same.quantity = String(same.value);
 }
 
 module.exports = { parse };
