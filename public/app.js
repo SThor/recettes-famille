@@ -127,13 +127,7 @@ if (recipe) {
     } catch { /* stockage indisponible (navigation privée…) : tant pis */ }
   }
 
-  const clock = s => {
-    s = Math.max(0, Math.ceil(s));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = String(s % 60).padStart(2, '0');
-    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
-  };
+  const { clock } = TimerState;
 
   // Son généré (pas de fichier audio) ; le contexte doit naître d'un clic de l'utilisateur.
   function unlockAudio() {
@@ -158,6 +152,29 @@ if (recipe) {
       osc.stop(now + offset + 0.22);
     });
   }
+  // Rappel doux (borne basse d'une plage) : deux notes montantes, une seule fois, plus discrètes.
+  function chime() {
+    if (!audio) return;
+    const now = audio.currentTime;
+    [[0, 660], [0.18, 880]].forEach(([offset, freq]) => {
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.5);
+      osc.connect(gain).connect(audio.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.52);
+    });
+  }
+  function softAlert(t) {
+    chime();
+    navigator.vibrate?.(200);
+    Object.assign(t, TimerState.ackCheck(t));
+    save();
+  }
 
   // Garder l'écran allumé tant qu'un minuteur tourne (si le navigateur le permet).
   async function keepAwake(on) {
@@ -175,6 +192,7 @@ if (recipe) {
     t.endAt = null;
     t.remaining = 0;
     t.endedAt = endedAt;
+    t.nextCheck = null;
     save();
     if (Date.now() - endedAt >= RING_FOR) return; // terminé depuis longtemps : juste affiché
     const once = () => { beep(); navigator.vibrate?.([300, 150, 300]); };
@@ -192,8 +210,8 @@ if (recipe) {
     unlockAudio();
     let t = timers.get(btn);
     if (!t) {
-      const total = Number(btn.dataset.seconds);
-      t = { label: btn.dataset.label, html: btn.innerHTML, total, remaining: total, endAt: null, done: false, ringing: null };
+      // Plage « 10 à 15 minutes » : data-seconds = borne basse (rappel doux), data-seconds-max = borne haute.
+      t = { ...TimerState.create({ label: btn.dataset.label, seconds: Number(btn.dataset.seconds), secondsMax: Number(btn.dataset.secondsMax) || 0 }), html: btn.innerHTML, ringing: null };
       timers.set(btn, t);
     }
     if (t.done) return stop(btn); // minuteur terminé : un clic l'arrête
@@ -212,15 +230,31 @@ if (recipe) {
     save();
     update();
   }
+  // « Encore 2 min » (nouveau rappel doux) et « +1 min » (prolonge ; un minuteur terminé repart).
+  function snooze(btn) {
+    const t = timers.get(btn);
+    Object.assign(t, TimerState.snooze(t, Date.now()));
+    save();
+    update();
+  }
+  function addMinute(btn) {
+    const t = timers.get(btn);
+    stopRinging(t);
+    Object.assign(t, TimerState.addTime(t, Date.now()));
+    save();
+    update();
+  }
 
   function update() {
     const now = Date.now();
     for (const [btn, t] of timers) {
       if (t.endAt && t.endAt <= now) ring(t);
-      const left = t.endAt ? (t.endAt - now) / 1000 : t.remaining;
+      else if (TimerState.dueCheck(t, now)) softAlert(t);
+      const left = TimerState.leftOf(t, now);
       btn.classList.toggle('running', Boolean(t.endAt));
       btn.classList.toggle('paused', !t.endAt && !t.done);
       btn.classList.toggle('done', t.done);
+      btn.classList.toggle('watch', TimerState.phase(t, now) === 'surveiller');
       // Seul le texte change : l'icône garde son animation (aiguille qui tourne, pause, fin).
       const text = btn.querySelector('.timer-text');
       if (text) text.textContent = t.done ? 'Terminé !' : clock(left);
@@ -235,28 +269,52 @@ if (recipe) {
 
   function renderTray(now) {
     tray.hidden = timers.size === 0;
+    const button = (className, text, onclick, title) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = className;
+      b.textContent = text;
+      if (title) b.title = title;
+      b.onclick = onclick;
+      return b;
+    };
     tray.replaceChildren(...[...timers].map(([btn, t]) => {
+      const watch = TimerState.phase(t, now) === 'surveiller';
       const row = document.createElement('div');
-      row.className = `timer-row${t.done ? ' done' : ''}`;
-      const name = document.createElement('button');
-      name.type = 'button';
-      name.className = 'timer-name';
-      name.textContent = t.label;
-      name.title = 'Voir l’étape';
-      name.onclick = () => btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const time = document.createElement('button');
-      time.type = 'button';
-      time.className = 'timer-time';
-      time.textContent = t.done ? 'Terminé !' : `${clock(t.endAt ? (t.endAt - now) / 1000 : t.remaining)}${t.endAt ? '' : ' ⏸'}`;
-      time.title = t.done ? 'Arrêter' : t.endAt ? 'Mettre en pause' : 'Reprendre';
-      time.onclick = () => toggle(btn);
-      const close = document.createElement('button');
-      close.type = 'button';
-      close.className = 'timer-stop';
-      close.textContent = '✕';
+      row.className = `timer-row${t.done ? ' done' : ''}${watch ? ' watch' : ''}`;
+      // Ligne 1 : nom (va à l'étape), temps (pause / reprise), +1 min, arrêt.
+      const line = document.createElement('div');
+      line.className = 'timer-line';
+      const close = button('timer-stop', '✕', () => stop(btn));
       close.setAttribute('aria-label', `Arrêter le minuteur ${t.label}`);
-      close.onclick = () => stop(btn);
-      row.append(name, time, close);
+      line.append(
+        button('timer-name', t.label, () => btn.scrollIntoView({ behavior: 'smooth', block: 'center' }), 'Voir l’étape'),
+        button('timer-time', TimerState.trayText(t, now), () => toggle(btn), t.done ? 'Arrêter' : t.endAt ? 'Mettre en pause' : 'Reprendre'),
+        button('timer-more', '+1 min', () => addMinute(btn), 'Ajouter une minute'),
+        close,
+      );
+      // Ligne 2 : progression, avec la zone « à surveiller » d'une plage.
+      const { done, watchFrom } = TimerState.progress(t, now);
+      const bar = document.createElement('div');
+      bar.className = 'timer-bar';
+      if (watchFrom != null) {
+        const zone = document.createElement('span');
+        zone.className = 'timer-bar-watch';
+        zone.style.left = `${watchFrom * 100}%`;
+        bar.append(zone);
+      }
+      const fill = document.createElement('span');
+      fill.className = 'timer-bar-fill';
+      fill.style.width = `${Math.min(1, done) * 100}%`;
+      bar.append(fill);
+      row.append(line, bar);
+      // Ligne 3, entre les deux bornes : « C'est prêt » ou « Encore 2 min ».
+      if (watch) {
+        const actions = document.createElement('div');
+        actions.className = 'timer-actions';
+        actions.append(button('timer-ready', 'C’est prêt', () => stop(btn)), button('timer-snooze', 'Encore 2 min', () => snooze(btn)));
+        row.append(actions);
+      }
       return row;
     }));
   }
@@ -271,7 +329,7 @@ if (recipe) {
     for (const s of saved) {
       const btn = buttons.find(b => b.dataset.timer === s.id);
       if (!btn) continue;
-      const t = { label: s.label, html: btn.innerHTML, total: s.total, remaining: s.remaining, endAt: s.endAt, done: false, ringing: null };
+      const t = { label: s.label, html: btn.innerHTML, total: s.total, check: s.check, nextCheck: s.nextCheck, remaining: s.remaining, endAt: s.endAt, done: false, ringing: null };
       timers.set(btn, t);
       if (s.done) ring(t, s.endedAt);
     }

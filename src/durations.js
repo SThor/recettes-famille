@@ -22,6 +22,16 @@ function toSeconds(quantity, unit) {
   return Math.round(value * factor);
 }
 
+// Bornes d'un minuteur en secondes : [basse, haute] (« 10 à 15 » → [600, 900], « 10 » → [600, 600]) ;
+// null si la durée est illisible.
+function toSecondsRange(quantity, unit) {
+  const low = toSeconds(quantity, unit);
+  if (low == null) return null;
+  const [, high] = String(quantity || '').trim().split(/\s*-\s*|\s+à\s+/);
+  const max = high != null ? toSeconds(high, unit) : null;
+  return [low, max != null && max > low ? max : low];
+}
+
 // Durée écrite en toutes lettres dans l'en-tête (« 20 minutes », « 1 h 30 », « 25 à 30 minutes »…) → minutes.
 // Pour une fourchette, on garde la valeur haute : le filtre ne doit jamais sous-estimer une recette.
 const NUM = String.raw`\d+(?:[.,]\d+)?|\d+\s*\/\s*\d+`;
@@ -65,4 +75,4 @@ function formatMinutes(min) {
   return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
 }
 
-module.exports = { toSeconds, toMinutes, formatMinutes };
+module.exports = { toSeconds, toSecondsRange, toMinutes, formatMinutes };

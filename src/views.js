@@ -1,5 +1,5 @@
 const { slugify, peopleOf } = require('./recipes');
-const { toSeconds, formatMinutes } = require('./durations');
+const { toSecondsRange, formatMinutes } = require('./durations');
 const { icon } = require('./icons');
 const { REVIEW_STATES, reviewStateOf } = require('./revue');
 // Change à chaque démarrage : force le rechargement des CSS/JS après un déploiement.
@@ -249,9 +249,10 @@ function stepHtml(parts, ctx = { timer: 0 }) {
     const duration = `${p.quantity}${p.unit ? ' ' + p.unit : ''}`;
     const label = `${icon('timer', 16)}<span class="timer-text">${p.name ? `${esc(p.name)} : ` : ''}${esc(duration)}</span>`;
     // Durée lisible : bouton qui lance un compte à rebours (public/app.js), sinon simple texte.
-    const seconds = toSeconds(p.quantity, p.unit);
+    // Plage « 10 à 15 minutes » : rappel doux à la borne basse, alarme à la borne haute (data-seconds-max).
+    const [seconds, secondsMax] = toSecondsRange(p.quantity, p.unit) || [];
     return seconds
-      ? `<button type="button" class="timer" data-timer="${ctx.timer++}" data-seconds="${seconds}" data-label="${esc(p.name || duration)}">${label}</button>`
+      ? `<button type="button" class="timer" data-timer="${ctx.timer++}" data-seconds="${seconds}"${secondsMax > seconds ? ` data-seconds-max="${secondsMax}"` : ''} data-label="${esc(p.name || duration)}">${label}</button>`
       : `<span class="timer">${label}</span>`;
   }).join('');
 }

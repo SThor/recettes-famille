@@ -59,3 +59,18 @@ test.describe('Rendu des minuteurs', () => {
     assert.match(out, /<span class="timer">/);
   });
 });
+
+test.describe('Minuteur à plage : les deux bornes sur le bouton', () => {
+  const { toSecondsRange } = require('../src/durations');
+  const html = src => recipeArticle(fromSource(`---\ntitle: T\n---\n\n${src}\n`, 'T.cook', null), { back: false });
+  test('toSecondsRange : plage « - » ou « à », durée simple, illisible', () => {
+    assert.deepEqual(toSecondsRange('10-15', 'minutes'), [600, 900]);
+    assert.deepEqual(toSecondsRange('10 à 15', 'minutes'), [600, 900]);
+    assert.deepEqual(toSecondsRange('10', 'min'), [600, 600]);
+    assert.equal(toSecondsRange('une nuit', ''), null);
+  });
+  test('bouton : data-seconds = borne basse, data-seconds-max = borne haute (seulement pour une plage)', () => {
+    assert.match(html('Cuire ~{10-15%minutes}.'), /<button type="button" class="timer" data-timer="0" data-seconds="600" data-seconds-max="900" data-label="10 à 15 minutes">/);
+    assert.doesNotMatch(html('Cuire ~{10%minutes}.'), /data-seconds-max/);
+  });
+});

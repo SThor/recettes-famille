@@ -575,3 +575,28 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 
 /* Avertissements de l'aperçu (ex. référence @& introuvable) */
 .warning { background: #fdf3e1; color: #7a4a06; padding: 8px 12px; border-radius: var(--radius); margin: 0 0 8px; font-size: .9rem; }
+
+/* Bandeau des minuteurs v2 : ligne d'infos, barre de progression (zone « à surveiller » d'une plage),
+   boutons « C'est prêt » / « Encore 2 min » entre les deux bornes, « +1 min » toujours là. */
+.timer-row { display: grid; gap: 5px; padding: 6px 8px 8px 14px; border-radius: 18px; }
+.timer-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.timer-more {
+  font-size: .8rem !important; font-weight: 600; white-space: nowrap; padding: 2px 8px !important;
+  border-radius: 999px; color: var(--accent) !important; background: var(--accent-soft) !important;
+}
+.timer-bar { position: relative; height: 4px; margin-right: 6px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.timer-bar-watch { position: absolute; top: 0; bottom: 0; right: 0; background: color-mix(in srgb, var(--warn) 45%, transparent); }
+.timer-bar-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--accent); transition: width .25s linear; }
+.timer-row.watch { border-color: var(--warn); }
+.timer-row.watch .timer-time { color: var(--warn) !important; }
+.timer-row.done .timer-bar-fill { background: #c0392b; }
+.timer-actions { display: flex; gap: 8px; margin-right: 6px; }
+.timer-actions button {
+  flex: 1; font-size: .9rem; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+}
+.timer-actions .timer-ready { background: var(--accent) !important; color: var(--surface) !important; }
+.timer-actions .timer-snooze { background: var(--accent-soft) !important; color: var(--accent) !important; }
+button.timer.watch.running { background: var(--warn); }
+.theme-vichy .timer-row, .theme-vichy .timer-more, .theme-vichy .timer-actions button { border-radius: var(--radius); }
+.timer-name { min-width: 4.5em; }
+.timer-time { white-space: nowrap; }
