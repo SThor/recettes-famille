@@ -295,25 +295,33 @@ if (recipe) {
         close,
       );
       // Ligne 2 : progression, avec la zone « à surveiller » d'une plage.
-      const { done, watchFrom } = TimerState.progress(t, now);
+      const { done, watchFrom, reminderAt } = TimerState.progress(t, now);
       const bar = document.createElement('div');
       bar.className = 'timer-bar';
-      if (watchFrom != null) {
-        const zone = document.createElement('span');
-        zone.className = 'timer-bar-watch';
-        zone.style.left = `${watchFrom * 100}%`;
-        bar.append(zone);
-      }
+      const mark = (className, left) => {
+        const el = document.createElement('span');
+        el.className = className;
+        el.style.left = `${left * 100}%`;
+        bar.append(el);
+      };
+      if (watchFrom != null) mark('timer-bar-watch', watchFrom);
       const fill = document.createElement('span');
       fill.className = 'timer-bar-fill';
       fill.style.width = `${Math.min(1, done) * 100}%`;
       bar.append(fill);
+      if (reminderAt != null) mark('timer-bar-reminder', reminderAt); // repère du rappel programmé
       row.append(line, bar);
-      // Ligne 3, entre les deux bornes : nouveau rappel doux dans 2 minutes.
-      if (actions.includes('rappel')) {
+      // Ligne 3, entre les deux bornes : nouveau rappel doux dans 2 minutes, ou le temps avant celui prévu.
+      if (actions.includes('rappel') || actions.includes('rappel-prevu')) {
         const more = document.createElement('div');
         more.className = 'timer-actions';
-        more.append(button('timer-snooze', 'Rappel dans 2 minutes', () => snooze(btn)));
+        if (actions.includes('rappel')) more.append(button('timer-snooze', 'Rappel dans 2 minutes', () => snooze(btn)));
+        else {
+          const info = document.createElement('p');
+          info.className = 'timer-reminder';
+          info.textContent = TimerState.reminderText(t, now);
+          more.append(info);
+        }
         row.append(more);
       }
       return row;

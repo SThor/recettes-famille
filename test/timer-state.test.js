@@ -106,8 +106,8 @@ test.describe('Minuteurs à plage et ajouts de temps', () => {
     assert.equal(trayText({ ...t, endAt: null, remaining: 400 }, NOW), 'Vérifier dans 1:40 ⏸');
     assert.equal(trayText(run(create({ label: 'r', seconds: 90 }), NOW), NOW + 30 * S), '1:00');
     assert.equal(trayText({ ...t, done: true, endAt: null, remaining: 0 }, NOW), 'Terminé !');
-    assert.deepEqual(progress(t, NOW + 450 * S), { done: 0.5, watchFrom: 600 / 900 });
-    assert.deepEqual(progress(run(create({ label: 'r', seconds: 100 }), NOW), NOW + 25 * S), { done: 0.25, watchFrom: null });
+    assert.deepEqual(progress(t, NOW + 450 * S), { done: 0.5, watchFrom: 600 / 900, reminderAt: null });
+    assert.deepEqual(progress(run(create({ label: 'r', seconds: 100 }), NOW), NOW + 25 * S), { done: 0.25, watchFrom: null, reminderAt: null });
   });
 
   test('mémorisation : bornes et rappel conservés ; rappel passé pendant l\'absence → pas de sonnerie tardive', () => {
@@ -138,5 +138,27 @@ test.describe('Boutons du bandeau selon l\'état', () => {
     assert.deepEqual(trayActions(range, NOW + 800 * S), []);              // reste 100 s : l'alarme suffit
     assert.deepEqual(trayActions(run(create({ label: 'r', seconds: 600 }), NOW), NOW + 590 * S), []); // simple, en cours
     assert.deepEqual(trayActions({ ...range, done: true, endAt: null, remaining: 0 }, NOW + 900 * S), ['plus1']);
+  });
+});
+
+test.describe('Rappel programmé (« Rappel dans 2 minutes »)', () => {
+  const S = 1000;
+  const { create, leftOf, snooze, ackCheck, trayActions, reminderText, progress } = require('../public/timer-state');
+  const run = (t, at) => ({ ...t, endAt: at + leftOf(t, at) * S });
+  // Plage 10 à 15 min, rappel doux passé à 10 min, puis « Rappel dans 2 minutes » à 10 min 50 s.
+  const watching = ackCheck(run(create({ label: 'c', seconds: 600, secondsMax: 900 }), NOW));
+  const snoozed = snooze(watching, NOW + 650 * S); // rappel quand il restera 130 s, soit à 770 s
+
+  test('le bouton laisse place au texte « Rappel dans … » tant que le rappel attend', () => {
+    assert.deepEqual(trayActions(snoozed, NOW + 700 * S), ['rappel-prevu']);
+    assert.equal(reminderText(snoozed, NOW + 700 * S), 'Rappel dans 1:10');
+    assert.deepEqual(trayActions(ackCheck(snoozed), NOW + 775 * S), ['rappel']); // rappel sonné, reste 125 s : le bouton revient
+  });
+
+  test('repère sur la barre à l\'endroit du rappel, seulement s\'il est programmé dans la zone à surveiller', () => {
+    assert.equal(progress(snoozed, NOW + 700 * S).reminderAt, 770 / 900);
+    assert.equal(progress(watching, NOW + 700 * S).reminderAt, null); // rien de programmé
+    // Le premier rappel (borne basse) est déjà marqué par le début de la zone : pas de repère en plus.
+    assert.equal(progress(run(create({ label: 'c', seconds: 600, secondsMax: 900 }), NOW), NOW + 100 * S).reminderAt, null);
   });
 });

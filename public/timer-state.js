@@ -67,15 +67,23 @@
 
   // Boutons du bandeau : « Rappel dans 2 minutes » entre les deux bornes (s'il reste plus de 2 min,
   // sinon l'alarme suffit) ; « +1 min » une fois terminé. L'arrêt (✕) est toujours là.
+  // Rappel encore à venir (un rappel dont l'heure est passée sonne au prochain tour, il n'est plus « prévu »).
+  const reminderPending = (t, now) => t.nextCheck != null && leftOf(t, now) > t.nextCheck;
+  // Un rappel déjà programmé (après « Rappel dans 2 minutes ») remplace le bouton par « Rappel dans … ».
   function trayActions(t, now) {
     if (t.done) return ['plus1'];
-    return phase(t, now) === 'surveiller' && leftOf(t, now) > SNOOZE ? ['rappel'] : [];
+    if (phase(t, now) !== 'surveiller') return [];
+    if (reminderPending(t, now)) return ['rappel-prevu'];
+    return leftOf(t, now) > SNOOZE ? ['rappel'] : [];
   }
+  const reminderText = (t, now) => `Rappel dans ${clock(leftOf(t, now) - t.nextCheck)}`;
 
-  // Barre de progression : part écoulée, et début de la zone « à surveiller » (fraction) pour une plage.
+  // Barre de progression : part écoulée, début de la zone « à surveiller » (fraction) pour une plage,
+  // et repère du rappel programmé dans cette zone (le premier rappel, lui, est le début de la zone).
   const progress = (t, now) => ({
     done: t.total ? (t.total - leftOf(t, now)) / t.total : 1,
     watchFrom: t.check != null ? t.check / t.total : null,
+    reminderAt: phase(t, now) === 'surveiller' && reminderPending(t, now) ? (t.total - t.nextCheck) / t.total : null,
   });
 
   const serialize = (timers, now) => timers.map(t => ({
@@ -106,5 +114,5 @@
     }).filter(t => !t.done || now - (t.endedAt || now) <= FORGET_AFTER);
   }
 
-  return { storageKey, clock, create, leftOf, phase, dueCheck, ackCheck, snooze, addTime, trayText, trayActions, progress, serialize, restore };
+  return { storageKey, clock, create, leftOf, phase, dueCheck, ackCheck, snooze, addTime, trayText, trayActions, reminderText, progress, serialize, restore };
 });

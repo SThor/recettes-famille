@@ -599,3 +599,8 @@ button.timer.watch.running { background: var(--warn); }
 .theme-vichy .timer-row, .theme-vichy .timer-more, .theme-vichy .timer-actions button { border-radius: var(--radius); }
 .timer-name { min-width: 4.5em; }
 .timer-time { white-space: nowrap; }
+/* Rappel programmé : repère sur la barre, et le temps avant lui à la place du bouton */
+.timer-bar { overflow: visible; }
+.timer-bar-watch, .timer-bar-fill { border-radius: 2px; }
+.timer-bar-reminder { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--warn); }
+.timer-reminder { flex: 1; margin: 0; padding: 6px 10px; text-align: center; font-size: .9rem; font-weight: 600; color: var(--warn); font-variant-numeric: tabular-nums; }
