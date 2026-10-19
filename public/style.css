@@ -653,7 +653,7 @@ button.timer.watch.running { background: var(--warn); }
 .specimen { background: var(--bg); color: var(--text); font-family: var(--font); padding: 0 14px 20px; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
 .specimen-title { margin-top: .8em; }
 .specimen-label { font: 600 .75rem/1.2 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
-.specimen .site-header { position: static; margin: 0 -14px; }
+.specimen .site-header { position: relative; margin: 0 -14px; } /* relative : contient le décor du thème (bande vichy) */
 .specimen .filters-panel { position: static; max-height: none; transform: none; visibility: visible; box-shadow: none; border-radius: var(--radius); }
 .specimen .cards { grid-template-columns: 1fr; }
 .specimen .course h2 { margin-top: 0; }
