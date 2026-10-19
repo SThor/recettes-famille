@@ -568,7 +568,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .filters-panel .review-filter .review .count { color: var(--muted); font-size: .85em; }
 .filters-panel .review-filter .review[data-state="ok"] .icon { color: var(--ok); }
 .filters-panel .review-filter .review[data-state="questions"] .icon { color: var(--warn); }
-.filters-panel .review-filter .review[aria-current="true"] { outline: 1.5px solid var(--accent); }
 .filter-pill .icon-check { color: var(--ok); }
 .filter-pill .icon-alert { color: var(--warn); }
 .filters-panel .review-filter .review[data-state="a-verifier"] .icon, .filter-pill .icon-circle { color: var(--muted); }
@@ -616,11 +615,19 @@ button.timer.watch.running { background: var(--warn); }
 .tag-page .family { margin: -4px 0 6px; font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .tag-page .definition { font-size: 1.1rem; margin: 0 0 8px; }
 .tag-page .tag-actions { margin: 0 0 8px; }
-.tags .tag[aria-current="true"] { background: var(--accent); color: var(--surface); }
-.tags .tag[aria-current="true"] .count { color: inherit; opacity: .8; }
 .tag-cloud .glossary-link { margin: 8px 0 0; font-size: .85rem; }
 /* Admin : étiquettes hors glossaire, indice « temps de cuisson » */
 .glossary-missing { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--radius); background: #fdf3e1; color: #7a4a06; font-size: .9rem; }
 .glossary-missing p { margin: 0 0 4px; }
 .glossary-missing ul { margin: 0; padding-left: 18px; }
 .admin-list .hint { color: #7a4a06; background: #fdf3e1; border-radius: 6px; padding: 0 6px; font-size: .8rem; }
+
+/* Option de filtre active (personne, régime, étiquette, relecture) : même rendu partout, pleine ;
+   un clic la retire. */
+.tags a[aria-current="true"],
+.filters-panel .people .person[aria-current="true"],
+.filters-panel .diets .diet[aria-current="true"],
+.filters-panel .review-filter .review[aria-current="true"] { background: var(--accent); color: var(--surface); }
+.tags a[aria-current="true"] .count,
+.filters-panel a[aria-current="true"] .count { color: inherit; opacity: .8; }
+.filters-panel .review-filter .review[aria-current="true"] .icon { color: inherit; }

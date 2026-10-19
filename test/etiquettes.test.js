@@ -146,3 +146,29 @@ test.describe('Admin', () => {
     assert.doesNotMatch(await preview(src.replace('title: X', 'title: X\ncook time: 45 minutes')), /Pas de temps de cuisson/);
   });
 });
+
+test.describe('Panneau de filtres : options actives homogènes', () => {
+  let t, cookie;
+  test.beforeEach(async () => {
+    t = await startApp();
+    fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\nauthor: Annie\ndiet: végétarien\ntags: [auvergne]\n---\n\nMélanger.\n');
+    cookie = (await t.req(`/entrer?cle=${FAMILY}`)).headers.get('set-cookie').split(';')[0];
+  });
+  test.afterEach(async () => { await t.close(); });
+  const get = async url => (await t.req(url, { headers: { cookie } })).text();
+
+  test('personne, régime, relecture et étiquette actifs : aria-current, et un clic retire ce filtre seulement', async () => {
+    const html = await get('/?personne=Annie&regime=v%C3%A9g%C3%A9tarien&relecture=a-verifier&tag=auvergne');
+    assert.match(html, /<a class="person" href="\/\?regime=v%C3%A9g%C3%A9tarien&amp;relecture=a-verifier&amp;tag=auvergne" aria-current="true">Annie/);
+    assert.match(html, /<a class="diet" href="\/\?personne=Annie&amp;relecture=a-verifier&amp;tag=auvergne" aria-current="true">végétarien/);
+    assert.match(html, /<a class="review" data-state="a-verifier" href="\/\?personne=Annie&amp;regime=v%C3%A9g%C3%A9tarien&amp;tag=auvergne" aria-current="true">/);
+    assert.match(html, /<a class="tag" href="\/\?personne=Annie&amp;regime=v%C3%A9g%C3%A9tarien&amp;relecture=a-verifier" aria-current="true"/);
+  });
+
+  test('options inactives : pas d\'aria-current', async () => {
+    const html = await get('/?personne=Annie');
+    assert.deepEqual([...html.matchAll(/<a class="person"[^>]*aria-current="true">([^ <]+)/g)].map(m => m[1]), ['Annie']);
+    assert.doesNotMatch(html, /<a class="diet"[^>]*aria-current/);
+    assert.doesNotMatch(html, /<a class="review"[^>]*aria-current/);
+  });
+});

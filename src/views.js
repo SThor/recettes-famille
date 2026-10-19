@@ -136,6 +136,10 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   const isSelected = name => selectedTags.some(x => normValue(x) === normValue(name));
   const withTags = list => homeUrl(params, { tag: list.length ? list : null });
   const withoutTag = name => withTags(selectedTags.filter(x => normValue(x) !== normValue(name)));
+  // Option d'un filtre du panneau : active → marquée (aria-current) et un clic la retire ; sinon un clic la choisit.
+  const option = (key, value, active) => (active
+    ? `href="${esc(homeUrl(params, { [key]: null }))}" aria-current="true"`
+    : `href="${esc(homeUrl(params, { [key]: value }))}"`);
   const tagTitle = name => (tagInfo(name)?.definition ? ` title="${esc(tagInfo(name).definition)}"` : '');
 
   // Filtres actifs en pastilles : une croix par filtre (retire ce filtre seulement),
@@ -160,16 +164,16 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   // régimes et étiquettes sont dépliables, ouverts d'office quand un de leurs filtres est actif.
   const peopleRow = people.length ? `<details class="people"${personne ? ' open' : ''}>
     <summary class="filter-title">${icon('person', 16)} Personnes <span class="count">${people.length}</span></summary>
-    <div class="tags">${people.map(p => `<a class="person" href="${esc(homeUrl(params, { personne: p.name }))}">${esc(p.name)} <span class="count">${p.count}</span></a>`).join('')}</div>
+    <div class="tags">${people.map(p => `<a class="person" ${option('personne', p.name, normValue(p.name) === normValue(personne))}>${esc(p.name)} <span class="count">${p.count}</span></a>`).join('')}</div>
   </details>` : '';
   const dietRow = diets.length ? `<details class="diets"${regime ? ' open' : ''}>
     <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
-    <div class="tags">${diets.map(d => `<a class="diet" href="${esc(homeUrl(params, { regime: d.name }))}">${esc(d.name)} <span class="count">${d.count}</span></a>`).join('')}</div>
+    <div class="tags">${diets.map(d => `<a class="diet" ${option('regime', d.name, normValue(d.name) === normValue(regime))}>${esc(d.name)} <span class="count">${d.count}</span></a>`).join('')}</div>
   </details>` : '';
   // Relecture : vérifiées / questions à résoudre / pas encore vérifiées (mêmes icônes que les cartes).
   const reviewRow = reviews.length ? `<details class="review-filter"${relecture ? ' open' : ''}>
     <summary class="filter-title">${icon('check', 16)} Relecture</summary>
-    <div class="tags">${reviews.map(x => `<a class="review" data-state="${x.key}" href="${esc(homeUrl(params, { relecture: x.key }))}"${x.key === relecture ? ' aria-current="true"' : ''}>${icon(REVIEW_ICON[x.key], 14)}${esc(x.label)} <span class="count">${x.count}</span></a>`).join('')}</div>
+    <div class="tags">${reviews.map(x => `<a class="review" data-state="${x.key}" ${option('relecture', x.key, x.key === relecture)}>${icon(REVIEW_ICON[x.key], 14)}${esc(x.label)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
   // Une étiquette s'ajoute aux étiquettes déjà choisies ; une étiquette choisie se retire au clic.
   const tagCloud = tags.length ? `<details class="tag-cloud"${selectedTags.length ? ' open' : ''}>
