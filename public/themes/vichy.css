@@ -12,6 +12,12 @@
   --font: "Lora", Georgia, serif;
   --font-title: "Lora", Georgia, serif;
   --shadow: 2px 3px 0 rgb(90 60 40 / .12);
+  /* Filtres : rouge vichy, vert olive, bleu ardoise, moutarde, brun bois */
+  --c-person: #a5322d; --c-person-soft: #f6dfd8;
+  --c-diet: #59682c; --c-diet-soft: #e9ead2;
+  --c-duree: #465769; --c-duree-soft: #e2e7eb;
+  --c-tag: #86600f; --c-tag-soft: #f3e5c0;
+  --c-review: #77503a; --c-review-soft: #efe2d4;
   /* Motif vichy : deux bandes croisées semi-transparentes */
   --gingham:
     linear-gradient(90deg, rgb(179 53 47 / .55) 50%, transparent 0) 0 0 / 22px 22px,

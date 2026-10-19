@@ -48,13 +48,13 @@ test.describe('Accueil : relecture', () => {
 
   test('panneau : bloc « Relecture » avec les trois choix et leurs nombres, ouvert si actif ; pastille', async () => {
     let html = await get('/');
-    const block = html.match(/<details class="review-filter"[\s\S]*?<\/details>/)[0];
-    assert.doesNotMatch(block, /<details class="review-filter" open/);
+    const block = html.match(/<details class="review-filter kind-review"[\s\S]*?<\/details>/)[0];
+    assert.doesNotMatch(block, /<details class="review-filter kind-review" open/);
     assert.match(block, /href="\/\?relecture=ok"[^>]*>[\s\S]*Vérifiées <span class="count">0<\/span>/);
     assert.match(block, /href="\/\?relecture=questions"[^>]*>[\s\S]*Questions à résoudre <span class="count">1<\/span>/);
     assert.match(block, /href="\/\?relecture=a-verifier"[^>]*>[\s\S]*Pas encore vérifiées <span class="count">1<\/span>/);
     html = await get('/?tag=four&relecture=questions');
-    assert.match(html, /<details class="review-filter" open/);
-    assert.match(html, /class="filter-pill"><span class="pill-label">[\s\S]*Relecture : <b>Questions à résoudre<\/b>[\s\S]*?href="\/\?tag=four"/);
+    assert.match(html, /<details class="review-filter kind-review" open/);
+    assert.match(html, /class="filter-pill review"><span class="pill-label">[\s\S]*Relecture : <b>Questions à résoudre<\/b>[\s\S]*?href="\/\?tag=four"/);
   });
 });

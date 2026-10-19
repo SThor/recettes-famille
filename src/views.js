@@ -144,17 +144,17 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   const single = (kind, key, value, label, count, active, extra = {}) =>
     option({ kind, label, count, active, href: homeUrl(params, { [key]: active ? null : value }), ...extra });
 
-  // Filtres actifs en pastilles : une croix par filtre (retire ce filtre seulement),
+  // Filtres actifs en pastilles (classe = type, même couleur que ses options) : une croix par filtre (retire ce filtre seulement),
   // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
   const active = [
-    regime && ['leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
-    personne && ['person', `Personne : <b>${esc(personne)}</b>`, { personne: null }],
-    relecture && [REVIEW_ICON[relecture], `Relecture : <b>${esc((REVIEW_STATES.find(([k]) => k === relecture) || [])[1])}</b>`, { relecture: null }],
-    ...selectedTags.map(tg => ['tag', `Étiquette : <b>${esc(tg)}</b>`, { tag: selectedTags.filter(x => x !== tg).length ? selectedTags.filter(x => x !== tg) : null }]),
-    duree && ['timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
+    regime && ['diet', 'leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
+    personne && ['person', 'person', `Personne : <b>${esc(personne)}</b>`, { personne: null }],
+    relecture && ['review', REVIEW_ICON[relecture], `Relecture : <b>${esc((REVIEW_STATES.find(([k]) => k === relecture) || [])[1])}</b>`, { relecture: null }],
+    ...selectedTags.map(tg => ['tag', 'tag', `Étiquette : <b>${esc(tg)}</b>`, { tag: selectedTags.filter(x => x !== tg).length ? selectedTags.filter(x => x !== tg) : null }]),
+    duree && ['duree', 'timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
-  const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([iconName, label, remove]) =>
-    `<li class="filter-pill"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
+  const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([kind, iconName, label, remove]) =>
+    `<li class="filter-pill ${kind}"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
   ${active.length && !count ? `<p class="empty">${selectedTags.length === 1 && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
@@ -164,21 +164,21 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
 
   // Les trois filtres du panneau ont le même titre (.filter-title : icône, libellé, compteur) ;
   // régimes et étiquettes sont dépliables, ouverts d'office quand un de leurs filtres est actif.
-  const peopleRow = people.length ? `<details class="people"${personne ? ' open' : ''}>
+  const peopleRow = people.length ? `<details class="people kind-person"${personne ? ' open' : ''}>
     <summary class="filter-title">${icon('person', 16)} Personnes <span class="count">${people.length}</span></summary>
     <div class="tags">${people.map(p => single('person', 'personne', p.name, p.name, p.count, normValue(p.name) === normValue(personne))).join('')}</div>
   </details>` : '';
-  const dietRow = diets.length ? `<details class="diets"${regime ? ' open' : ''}>
+  const dietRow = diets.length ? `<details class="diets kind-diet"${regime ? ' open' : ''}>
     <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
     <div class="tags">${diets.map(d => single('diet', 'regime', d.name, d.name, d.count, normValue(d.name) === normValue(regime))).join('')}</div>
   </details>` : '';
   // Relecture : vérifiées / questions à résoudre / pas encore vérifiées (mêmes icônes que les cartes).
-  const reviewRow = reviews.length ? `<details class="review-filter"${relecture ? ' open' : ''}>
+  const reviewRow = reviews.length ? `<details class="review-filter kind-review"${relecture ? ' open' : ''}>
     <summary class="filter-title">${icon('check', 16)} Relecture</summary>
     <div class="tags">${reviews.map(x => single('review', 'relecture', x.key, x.label, x.count, x.key === relecture, { attrs: ` data-state="${x.key}"`, before: icon(REVIEW_ICON[x.key], 14) })).join('')}</div>
   </details>` : '';
   // Une étiquette s'ajoute aux étiquettes déjà choisies ; une étiquette choisie se retire au clic.
-  const tagCloud = tags.length ? `<details class="tag-cloud"${selectedTags.length ? ' open' : ''}>
+  const tagCloud = tags.length ? `<details class="tag-cloud kind-tag"${selectedTags.length ? ' open' : ''}>
     <summary class="filter-title">${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
     <div class="tags">${tags.map(x => option({
       kind: 'tag', label: x.name, count: x.count, active: isSelected(x.name), title: tagInfo(x.name)?.definition,
@@ -190,7 +190,7 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   // Curseur : position = premier cran ≥ durée demandée ; sans durée = dernier cran (sans limite).
   const found = duree ? DUREE_STOPS.findIndex(s => s >= duree) : -1;
   const stopIndex = found === -1 ? DUREE_STOPS.length : found;
-  const dureeBlock = `<div class="duree">
+  const dureeBlock = `<div class="duree kind-duree">
     <label class="filter-title" for="duree-range">${icon('timer', 16)} Durée max <output id="duree-label">${duree ? formatMinutes(duree) : 'sans limite'}</output></label>
     <input type="range" id="duree-range" min="0" max="${DUREE_STOPS.length}" step="1" value="${stopIndex}" data-stops="${DUREE_STOPS.join(',')}" style="--fill: ${Math.round(stopIndex / DUREE_STOPS.length * 100)}%">
     <div class="duree-presets">${DUREE_PRESETS.map(m => `<a class="duree-preset" data-minutes="${m}" href="${esc(homeUrl(params, { duree: m }))}">${formatMinutes(m)}</a>`).join('')}</div>

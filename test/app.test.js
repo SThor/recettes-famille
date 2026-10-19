@@ -91,7 +91,7 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes portant l\'étiquette', async () => {
       const html = await get('/?tag=auvergne');
       assert.deepEqual(cardsOf(html), ['pounty']);
-      assert.match(html, /<li class="filter-pill"><span class="pill-label"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquette : <b>auvergne<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
+      assert.match(html, /<li class="filter-pill tag"><span class="pill-label"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquette : <b>auvergne<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
       assert.match(html, /<p class="results-count"><b>1<\/b> recette<\/p>/);
     });
 
@@ -127,7 +127,7 @@ test.describe('Site public (connecté)', () => {
 
     test('bloc « Régimes » dépliable sur l\'accueil, avec compteurs', async () => {
       const html = await get('/');
-      const row = html.slice(html.indexOf('<details class="diets">'), html.indexOf('</details>', html.indexOf('<details class="diets">')));
+      const row = html.slice(html.indexOf('<details class="diets kind-diet">'), html.indexOf('</details>', html.indexOf('<details class="diets kind-diet">')));
       assert.match(row, /<summary class="filter-title"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régimes <span class="count">3<\/span><\/summary>/);
       assert.match(row, /<a class="option diet" href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien <span class="count">2<\/span><\/a>/);
       assert.match(row, /<a class="option diet" href="\/\?regime=sans%20gluten">sans gluten <span class="count">1<\/span><\/a>/);
@@ -137,7 +137,7 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil ne garde que les recettes du régime, sans tenir compte des majuscules', async () => {
       const html = await get('/?regime=V%C3%A9g%C3%A9tarien');
       assert.deepEqual(cardsOf(html), ['galette-seche', 'salade']);
-      assert.match(html, /<li class="filter-pill"><span class="pill-label"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régime : <b>Végétarien<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
+      assert.match(html, /<li class="filter-pill diet"><span class="pill-label"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régime : <b>Végétarien<\/b><\/span><a class="pill-remove" href="\/" aria-label="Retirer ce filtre">×<\/a><\/li>/);
       assert.match(html, /<p class="results-count"><b>2<\/b> recettes<\/p>/);
     });
 
@@ -158,7 +158,7 @@ test.describe('Site public (connecté)', () => {
       for (const f of ['Galette sèche.cook', 'Pounty.cook', 'Salade.cook']) {
         fs.writeFileSync(path.join(t.recipesDir, f), t.read(f).replace(/^diet:.*\n/m, ''));
       }
-      assert.doesNotMatch(await get('/'), /class="diets"/);
+      assert.doesNotMatch(await get('/'), /class="diets kind-diet"/);
     });
   });
 
@@ -222,7 +222,7 @@ test.describe('Site public (connecté)', () => {
 
     test('bloc « Personnes » : rapporteurs et personnes d\'origine fusionnés, comptés', async () => {
       const html = await get('/');
-      const block = html.slice(html.indexOf('<details class="people"'), html.indexOf('</details>', html.indexOf('<details class="people"')));
+      const block = html.slice(html.indexOf('<details class="people kind-person"'), html.indexOf('</details>', html.indexOf('<details class="people kind-person"')));
       assert.match(block, /<summary class="filter-title"><svg class="icon icon-person"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Personnes <span class="count">5<\/span><\/summary>/);
       assert.match(block, /<a class="option person" href="\/\?personne=Carole">Carole <span class="count">2<\/span><\/a>/);
       for (const name of ['Annie', 'Maman', 'Grand-Maman', 'Papa']) assert.match(block, new RegExp(`>${name} <span class="count">1</span></a>`));
@@ -231,7 +231,7 @@ test.describe('Site public (connecté)', () => {
     test('l\'accueil filtré garde les recettes où la personne est rapporteuse et/ou d\'origine', async () => {
       const html = await get('/?personne=carole');
       assert.deepEqual(cardsOf(html), ['roule', 'salade']);
-      assert.match(html, /<li class="filter-pill"><span class="pill-label"><svg class="icon icon-person"[^>]*>[\s\S]*?<\/svg> Personne : <b>carole<\/b><\/span>/);
+      assert.match(html, /<li class="filter-pill person"><span class="pill-label"><svg class="icon icon-person"[^>]*>[\s\S]*?<\/svg> Personne : <b>carole<\/b><\/span>/);
     });
 
     test('la recherche libre trouve aussi les personnes', async () => {
@@ -287,7 +287,7 @@ test.describe('Site public (connecté)', () => {
     test('régimes, durée et étiquettes sont dans le panneau', async () => {
       const panel = panelOf(await get('/'));
       assert.match(panel, /^<aside class="filters-panel" id="filtres" aria-label="Filtres">/);
-      assert.match(panel, /<details class="tag-cloud"/);
+      assert.match(panel, /<details class="tag-cloud kind-tag"/);
       assert.match(panel, /<input type="range" id="duree-range"/);
       assert.match(panel, /<input type="checkbox" id="duree-prep"/);
       for (const m of [15, 30, 60, 120]) assert.match(panel, new RegExp(`<a class="duree-preset" data-minutes="${m}" href="/\\?duree=${m}">`));
@@ -337,8 +337,8 @@ test.describe('Site public (connecté)', () => {
 
     test('bloc « Étiquettes » repliable, fermé par défaut', async () => {
       const html = await get('/');
-      const block = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
-      assert.match(block, /^<details class="tag-cloud">/);
+      const block = html.slice(html.indexOf('<details class="tag-cloud kind-tag"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud kind-tag"')));
+      assert.match(block, /^<details class="tag-cloud kind-tag">/);
       assert.match(block, /<summary class="filter-title"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquettes <span class="count">3<\/span><\/summary>/);
       assert.match(block, /<a class="option tag" href="\/\?tag=galette%20des%20rois">galette des rois <span class="count">1<\/span><\/a>/);
     });
@@ -347,7 +347,7 @@ test.describe('Site public (connecté)', () => {
       const html = await get('/?tag=auvergne');
       assert.equal(tagData(html).length, 3);
       // Ouvert d'office puisqu'une étiquette est filtrée
-      assert.match(html, /<details class="tag-cloud" open>[\s\S]*galette des rois/);
+      assert.match(html, /<details class="tag-cloud kind-tag" open>[\s\S]*galette des rois/);
     });
 
     test('l\'icône SVG d\'étiquette est fournie aux suggestions (pas d\'emoji)', async () => {
@@ -374,7 +374,7 @@ test.describe('Site public (connecté)', () => {
         fs.writeFileSync(path.join(t.recipesDir, f), t.read(f).replace(/^tags:.*$/m, 'tags: []'));
       }
       const html = await get('/');
-      assert.doesNotMatch(html, /class="tag-cloud"/);
+      assert.doesNotMatch(html, /class="tag-cloud kind-tag"/);
       assert.deepEqual(tagData(html), []);
     });
   });

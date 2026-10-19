@@ -11,6 +11,12 @@
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-title: var(--font);
   --shadow: 0 1px 2px rgb(0 0 0 / .06);
+  /* Une couleur par type de filtre (options, pastilles, titres de bloc) : teinte foncée + fond clair */
+  --c-person: #94505f; --c-person-soft: #f5e9eb;
+  --c-diet: #4b6f53; --c-diet-soft: #e8efe9;
+  --c-duree: #47637f; --c-duree-soft: #e7edf3;
+  --c-tag: #7d6328; --c-tag-soft: #f3eedf;
+  --c-review: #665d7c; --c-review-soft: #eeecf3;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -383,15 +389,15 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
 .filter-pill {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0;
   padding: 3px 3px 3px 12px; border-radius: 999px; font-size: .9rem;
-  background: var(--accent-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  background: var(--k-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--k) 25%, transparent);
 }
 .pill-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill-remove {
   flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
-  text-decoration: none; font-weight: 700; line-height: 1; color: var(--accent); background: var(--surface);
+  text-decoration: none; font-weight: 700; line-height: 1; color: var(--k); background: var(--surface);
   transition: background .15s, color .15s;
 }
-.pill-remove:hover, .pill-remove:focus-visible { background: var(--accent); color: var(--surface); }
+.pill-remove:hover, .pill-remove:focus-visible { background: var(--k); color: var(--surface); }
 .active-filters .clear-filters { font-size: .9rem; margin-left: 4px; }
 
 /* Repli du panneau (grand écran) : bouton icône dans l'en-tête du panneau, bouton de réouverture en tête des résultats */
@@ -422,7 +428,7 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 @media (prefers-reduced-motion: reduce) {
   button.timer .icon-hand, button.timer.done .icon { animation: none; }
 }
-.filter-pill .icon { color: var(--accent); }
+.filter-pill .icon { color: var(--k); }
 /* Icônes des titres du panneau et de la rangée d'étiquettes d'une recette */
 .filters-panel .icon, .tags > .icon { color: var(--accent); }
 .tags > .icon { align-self: center; margin-right: 2px; }
@@ -435,7 +441,7 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
   display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;
   font-family: var(--font); font-size: .95rem; font-weight: 700; color: var(--text);
 }
-.filters-panel .filter-title .icon { color: var(--accent); }
+.filters-panel .filter-title .icon { color: var(--k); }
 .filters-panel .filter-title .count, .filters-panel .filter-title output { font-weight: 400; color: var(--muted); font-size: .85rem; }
 .filters-panel .filter-title output { margin-left: auto; color: var(--accent); font-weight: 600; }
 .filters-panel details > summary.filter-title { list-style: none; }
@@ -612,16 +618,25 @@ button.timer.watch.running { background: var(--warn); }
 .glossary-missing ul { margin: 0; padding-left: 18px; }
 .admin-list .hint { color: #7a4a06; background: #fdf3e1; border-radius: 6px; padding: 0 6px; font-size: .8rem; }
 
+/* Couleur de chaque type de filtre : son bloc du panneau (icône du titre), ses options et ses pastilles
+   ne lisent que --k / --k-soft. Le bloc Durée (curseur, présélections) reprend sa teinte comme accent. */
+.option.person, .filter-pill.person, .kind-person { --k: var(--c-person); --k-soft: var(--c-person-soft); }
+.option.diet, .filter-pill.diet, .kind-diet { --k: var(--c-diet); --k-soft: var(--c-diet-soft); }
+.filter-pill.duree, .kind-duree { --k: var(--c-duree); --k-soft: var(--c-duree-soft); }
+.option.tag, .filter-pill.tag, .kind-tag { --k: var(--c-tag); --k-soft: var(--c-tag-soft); }
+.option.review, .filter-pill.review, .kind-review { --k: var(--c-review); --k-soft: var(--c-review-soft); }
+.filters-panel .kind-duree { --accent: var(--k); --accent-soft: var(--k-soft); }
+
 /* Options des filtres du panneau (personnes, régimes, étiquettes, relecture) : un seul composant,
    .option + son type (views.js). Les thèmes ne stylent que .option. Active : pleine ; un clic la retire. */
 .filters-panel .option {
   display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
   font-size: .8rem; font-weight: 400; padding: 2px 10px; border-radius: 999px;
-  background: var(--accent-soft); color: var(--accent); text-decoration: none;
+  background: var(--k-soft); color: var(--k); text-decoration: none;
 }
 .filters-panel .option:hover { text-decoration: none; filter: brightness(.96); }
 .filters-panel .option .count { color: var(--muted); font-size: .85em; }
-.filters-panel .option[aria-current="true"] { background: var(--accent); color: var(--surface); }
+.filters-panel .option[aria-current="true"] { background: var(--k); color: var(--surface); }
 .filters-panel .option[aria-current="true"] .count { color: inherit; opacity: .8; }
 .filters-panel .option.review[data-state="ok"] .icon { color: var(--ok); }
 .filters-panel .option.review[data-state="questions"] .icon { color: var(--warn); }

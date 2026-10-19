@@ -13,6 +13,12 @@
   --font: "Nunito", system-ui, sans-serif;
   --font-title: "Fraunces", Georgia, serif;
   --shadow: 0 6px 18px -10px rgb(122 96 80 / .35);
+  /* Filtres : rose poudré, vert sauge, bleu ciel, beurre, lavande */
+  --c-person: #9c5266; --c-person-soft: #f8e3e6;
+  --c-diet: #52715a; --c-diet-soft: #e3eedd;
+  --c-duree: #46698a; --c-duree-soft: #e0edf6;
+  --c-tag: #7f6419; --c-tag-soft: #f8efcf;
+  --c-review: #695e8a; --c-review-soft: #ece8f5;
 }
 .theme-pastel h1, .theme-pastel h2 { font-weight: 700; color: #5b4a40; }
 

@@ -85,7 +85,7 @@ test.describe('Étiquettes sur le site', () => {
   test('nuage d\'étiquettes de l\'accueil : définition en info-bulle, lien vers le glossaire', async () => {
     const html = await get('/');
     assert.match(html, /<a class="option tag" href="\/\?tag=auvergne" title="recettes d&#39;Auvergne, comme le pounty.">auvergne <span class="count">1<\/span><\/a>/);
-    assert.match(html.slice(html.indexOf('<details class="tag-cloud"')), /href="\/etiquettes"/);
+    assert.match(html.slice(html.indexOf('<details class="tag-cloud kind-tag"')), /href="\/etiquettes"/);
   });
 });
 
@@ -114,7 +114,7 @@ test.describe('Filtre par plusieurs étiquettes', () => {
 
   test('nuage : une étiquette s\'ajoute à la sélection ; une étiquette déjà choisie se retire', async () => {
     const html = await get('/?tag=auvergne');
-    const cloud = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
+    const cloud = html.slice(html.indexOf('<details class="tag-cloud kind-tag"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud kind-tag"')));
     assert.match(cloud, /<a class="option tag" href="\/\?tag=auvergne&amp;tag=four">four/);
     assert.match(cloud, /<a class="option tag" href="\/" aria-current="true">auvergne/);
   });
