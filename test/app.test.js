@@ -129,9 +129,9 @@ test.describe('Site public (connecté)', () => {
       const html = await get('/');
       const row = html.slice(html.indexOf('<details class="diets">'), html.indexOf('</details>', html.indexOf('<details class="diets">')));
       assert.match(row, /<summary class="filter-title"><svg class="icon icon-leaf"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Régimes <span class="count">3<\/span><\/summary>/);
-      assert.match(row, /<a class="diet" href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien <span class="count">2<\/span><\/a>/);
-      assert.match(row, /<a class="diet" href="\/\?regime=sans%20gluten">sans gluten <span class="count">1<\/span><\/a>/);
-      assert.match(row, /<a class="diet" href="\/\?regime=Sans%20porc">Sans porc <span class="count">1<\/span><\/a>/);
+      assert.match(row, /<a class="option diet" href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien <span class="count">2<\/span><\/a>/);
+      assert.match(row, /<a class="option diet" href="\/\?regime=sans%20gluten">sans gluten <span class="count">1<\/span><\/a>/);
+      assert.match(row, /<a class="option diet" href="\/\?regime=Sans%20porc">Sans porc <span class="count">1<\/span><\/a>/);
     });
 
     test('l\'accueil ne garde que les recettes du régime, sans tenir compte des majuscules', async () => {
@@ -224,7 +224,7 @@ test.describe('Site public (connecté)', () => {
       const html = await get('/');
       const block = html.slice(html.indexOf('<details class="people"'), html.indexOf('</details>', html.indexOf('<details class="people"')));
       assert.match(block, /<summary class="filter-title"><svg class="icon icon-person"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Personnes <span class="count">5<\/span><\/summary>/);
-      assert.match(block, /<a class="person" href="\/\?personne=Carole">Carole <span class="count">2<\/span><\/a>/);
+      assert.match(block, /<a class="option person" href="\/\?personne=Carole">Carole <span class="count">2<\/span><\/a>/);
       for (const name of ['Annie', 'Maman', 'Grand-Maman', 'Papa']) assert.match(block, new RegExp(`>${name} <span class="count">1</span></a>`));
     });
 
@@ -340,7 +340,7 @@ test.describe('Site public (connecté)', () => {
       const block = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
       assert.match(block, /^<details class="tag-cloud">/);
       assert.match(block, /<summary class="filter-title"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg> Étiquettes <span class="count">3<\/span><\/summary>/);
-      assert.match(block, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois <span class="count">1<\/span><\/a>/);
+      assert.match(block, /<a class="option tag" href="\/\?tag=galette%20des%20rois">galette des rois <span class="count">1<\/span><\/a>/);
     });
 
     test('le bloc liste toutes les étiquettes même quand un filtre est actif', async () => {

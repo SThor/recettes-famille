@@ -56,7 +56,7 @@
 .theme-pastel .step-no { background: var(--rose); color: #6d4741; }
 .theme-pastel .note { background: var(--rose-soft); border-left-color: var(--rose); border-radius: 0 18px 18px 0; }
 .theme-pastel .hero { border-radius: 0 0 28px 28px; }
-.theme-pastel .tags .tag { background: var(--rose-soft); color: #a8645c; }
+.theme-pastel .recipe .tags .tag { background: var(--rose-soft); color: #a8645c; }
 .theme-pastel .button { background: var(--accent); }
 .theme-pastel .site-footer { border-top: 0; }
 
@@ -65,8 +65,4 @@
   .theme-pastel .hero { width: 100%; margin: 8px 0 0; border-radius: 28px; }
 }
 /* Bloc « Étiquettes » posé sur le fond à pois : pastilles crème pour rester lisibles. */
-.theme-pastel .tag-cloud .tags .tag { background: var(--surface); }
 .theme-pastel .tag-cloud summary { background: var(--surface); display: inline-block; padding: 2px 12px; border-radius: 12px; }
-
-/* Étiquette active : même fond plein que les autres options actives du panneau */
-.theme-pastel .tags .tag[aria-current="true"], .theme-pastel .tag-cloud .tags .tag[aria-current="true"] { background: var(--accent); color: var(--surface); }

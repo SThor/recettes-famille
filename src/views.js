@@ -136,11 +136,13 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   const isSelected = name => selectedTags.some(x => normValue(x) === normValue(name));
   const withTags = list => homeUrl(params, { tag: list.length ? list : null });
   const withoutTag = name => withTags(selectedTags.filter(x => normValue(x) !== normValue(name)));
-  // Option d'un filtre du panneau : active → marquée (aria-current) et un clic la retire ; sinon un clic la choisit.
-  const option = (key, value, active) => (active
-    ? `href="${esc(homeUrl(params, { [key]: null }))}" aria-current="true"`
-    : `href="${esc(homeUrl(params, { [key]: value }))}"`);
-  const tagTitle = name => (tagInfo(name)?.definition ? ` title="${esc(tagInfo(name).definition)}"` : '');
+  // Option d'un filtre du panneau (personne, régime, étiquette, relecture) : un seul composant, classe
+  // « option » + son type. Active → marquée (aria-current) ; href = où mène le clic (la choisir ou la retirer).
+  const option = ({ kind, href, active, label, count, title = '', attrs = '', before = '' }) =>
+    `<a class="option ${kind}"${attrs} href="${esc(href)}"${active ? ' aria-current="true"' : ''}${title ? ` title="${esc(title)}"` : ''}>${before}${esc(label)} <span class="count">${count}</span></a>`;
+  // Filtre à une seule valeur (personne, régime, relecture) : choisir remplace, rechoisir retire.
+  const single = (kind, key, value, label, count, active, extra = {}) =>
+    option({ kind, label, count, active, href: homeUrl(params, { [key]: active ? null : value }), ...extra });
 
   // Filtres actifs en pastilles : une croix par filtre (retire ce filtre seulement),
   // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
@@ -164,24 +166,24 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   // régimes et étiquettes sont dépliables, ouverts d'office quand un de leurs filtres est actif.
   const peopleRow = people.length ? `<details class="people"${personne ? ' open' : ''}>
     <summary class="filter-title">${icon('person', 16)} Personnes <span class="count">${people.length}</span></summary>
-    <div class="tags">${people.map(p => `<a class="person" ${option('personne', p.name, normValue(p.name) === normValue(personne))}>${esc(p.name)} <span class="count">${p.count}</span></a>`).join('')}</div>
+    <div class="tags">${people.map(p => single('person', 'personne', p.name, p.name, p.count, normValue(p.name) === normValue(personne))).join('')}</div>
   </details>` : '';
   const dietRow = diets.length ? `<details class="diets"${regime ? ' open' : ''}>
     <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
-    <div class="tags">${diets.map(d => `<a class="diet" ${option('regime', d.name, normValue(d.name) === normValue(regime))}>${esc(d.name)} <span class="count">${d.count}</span></a>`).join('')}</div>
+    <div class="tags">${diets.map(d => single('diet', 'regime', d.name, d.name, d.count, normValue(d.name) === normValue(regime))).join('')}</div>
   </details>` : '';
   // Relecture : vérifiées / questions à résoudre / pas encore vérifiées (mêmes icônes que les cartes).
   const reviewRow = reviews.length ? `<details class="review-filter"${relecture ? ' open' : ''}>
     <summary class="filter-title">${icon('check', 16)} Relecture</summary>
-    <div class="tags">${reviews.map(x => `<a class="review" data-state="${x.key}" ${option('relecture', x.key, x.key === relecture)}>${icon(REVIEW_ICON[x.key], 14)}${esc(x.label)} <span class="count">${x.count}</span></a>`).join('')}</div>
+    <div class="tags">${reviews.map(x => single('review', 'relecture', x.key, x.label, x.count, x.key === relecture, { attrs: ` data-state="${x.key}"`, before: icon(REVIEW_ICON[x.key], 14) })).join('')}</div>
   </details>` : '';
   // Une étiquette s'ajoute aux étiquettes déjà choisies ; une étiquette choisie se retire au clic.
   const tagCloud = tags.length ? `<details class="tag-cloud"${selectedTags.length ? ' open' : ''}>
     <summary class="filter-title">${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
-    <div class="tags">${tags.map(x => (isSelected(x.name)
-      ? `<a class="tag" href="${esc(withoutTag(x.name))}" aria-current="true"${tagTitle(x.name)}>`
-      : `<a class="tag" href="${esc(withTags([...selectedTags, x.name]))}"${tagTitle(x.name)}>`)
-      + `${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
+    <div class="tags">${tags.map(x => option({
+      kind: 'tag', label: x.name, count: x.count, active: isSelected(x.name), title: tagInfo(x.name)?.definition,
+      href: isSelected(x.name) ? withoutTag(x.name) : withTags([...selectedTags, x.name]),
+    })).join('')}</div>
     <p class="glossary-link"><a href="/etiquettes">Toutes les étiquettes et leur définition</a></p>
   </details>` : '';
 

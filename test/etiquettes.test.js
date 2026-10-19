@@ -84,7 +84,7 @@ test.describe('Étiquettes sur le site', () => {
 
   test('nuage d\'étiquettes de l\'accueil : définition en info-bulle, lien vers le glossaire', async () => {
     const html = await get('/');
-    assert.match(html, /<a class="tag" href="\/\?tag=auvergne" title="recettes d&#39;Auvergne, comme le pounty.">auvergne <span class="count">1<\/span><\/a>/);
+    assert.match(html, /<a class="option tag" href="\/\?tag=auvergne" title="recettes d&#39;Auvergne, comme le pounty.">auvergne <span class="count">1<\/span><\/a>/);
     assert.match(html.slice(html.indexOf('<details class="tag-cloud"')), /href="\/etiquettes"/);
   });
 });
@@ -115,8 +115,8 @@ test.describe('Filtre par plusieurs étiquettes', () => {
   test('nuage : une étiquette s\'ajoute à la sélection ; une étiquette déjà choisie se retire', async () => {
     const html = await get('/?tag=auvergne');
     const cloud = html.slice(html.indexOf('<details class="tag-cloud"'), html.indexOf('</details>', html.indexOf('<details class="tag-cloud"')));
-    assert.match(cloud, /<a class="tag" href="\/\?tag=auvergne&amp;tag=four">four/);
-    assert.match(cloud, /<a class="tag" href="\/" aria-current="true">auvergne/);
+    assert.match(cloud, /<a class="option tag" href="\/\?tag=auvergne&amp;tag=four">four/);
+    assert.match(cloud, /<a class="option tag" href="\/" aria-current="true">auvergne/);
   });
 });
 
@@ -159,16 +159,35 @@ test.describe('Panneau de filtres : options actives homogènes', () => {
 
   test('personne, régime, relecture et étiquette actifs : aria-current, et un clic retire ce filtre seulement', async () => {
     const html = await get('/?personne=Annie&regime=v%C3%A9g%C3%A9tarien&relecture=a-verifier&tag=auvergne');
-    assert.match(html, /<a class="person" href="\/\?regime=v%C3%A9g%C3%A9tarien&amp;relecture=a-verifier&amp;tag=auvergne" aria-current="true">Annie/);
-    assert.match(html, /<a class="diet" href="\/\?personne=Annie&amp;relecture=a-verifier&amp;tag=auvergne" aria-current="true">végétarien/);
-    assert.match(html, /<a class="review" data-state="a-verifier" href="\/\?personne=Annie&amp;regime=v%C3%A9g%C3%A9tarien&amp;tag=auvergne" aria-current="true">/);
-    assert.match(html, /<a class="tag" href="\/\?personne=Annie&amp;regime=v%C3%A9g%C3%A9tarien&amp;relecture=a-verifier" aria-current="true"/);
+    assert.match(html, /<a class="option person" href="\/\?regime=v%C3%A9g%C3%A9tarien&amp;relecture=a-verifier&amp;tag=auvergne" aria-current="true">Annie/);
+    assert.match(html, /<a class="option diet" href="\/\?personne=Annie&amp;relecture=a-verifier&amp;tag=auvergne" aria-current="true">végétarien/);
+    assert.match(html, /<a class="option review" data-state="a-verifier" href="\/\?personne=Annie&amp;regime=v%C3%A9g%C3%A9tarien&amp;tag=auvergne" aria-current="true">/);
+    assert.match(html, /<a class="option tag" href="\/\?personne=Annie&amp;regime=v%C3%A9g%C3%A9tarien&amp;relecture=a-verifier" aria-current="true"/);
   });
 
   test('options inactives : pas d\'aria-current', async () => {
     const html = await get('/?personne=Annie');
-    assert.deepEqual([...html.matchAll(/<a class="person"[^>]*aria-current="true">([^ <]+)/g)].map(m => m[1]), ['Annie']);
-    assert.doesNotMatch(html, /<a class="diet"[^>]*aria-current/);
+    assert.deepEqual([...html.matchAll(/<a class="option person"[^>]*aria-current="true">([^ <]+)/g)].map(m => m[1]), ['Annie']);
+    assert.doesNotMatch(html, /<a class="option diet"[^>]*aria-current/);
     assert.doesNotMatch(html, /<a class="review"[^>]*aria-current/);
+  });
+});
+
+test.describe('Panneau de filtres : un seul composant d\'option', () => {
+  let t, cookie;
+  test.beforeEach(async () => {
+    t = await startApp();
+    fs.writeFileSync(path.join(t.recipesDir, 'Salade.cook'), '---\ntitle: Salade\nauthor: Annie\ndiet: végétarien\ntags: [auvergne]\n---\n\nMélanger.\n');
+    cookie = (await t.req(`/entrer?cle=${FAMILY}`)).headers.get('set-cookie').split(';')[0];
+  });
+  test.afterEach(async () => { await t.close(); });
+
+  test('personnes, régimes, étiquettes et relecture : toutes les options ont la classe « option » (+ leur type)', async () => {
+    const html = await (await t.req('/?tag=auvergne', { headers: { cookie } })).text();
+    const panel = html.slice(html.indexOf('<aside class="filters-panel"'), html.indexOf('</aside>'));
+    const links = [...panel.matchAll(/<div class="tags">([\s\S]*?)<\/div>/g)].flatMap(m => [...m[1].matchAll(/<a class="([^"]*)"/g)].map(x => x[1]));
+    assert.ok(links.length >= 6);
+    for (const cls of links) assert.match(cls, /^option (person|diet|tag|review)$/);
+    for (const kind of ['person', 'diet', 'tag', 'review']) assert.ok(links.includes(`option ${kind}`), kind);
   });
 });

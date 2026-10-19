@@ -444,7 +444,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .filters-panel details[open] > summary.filter-title::after { transform: rotate(90deg); }
 .filters-panel .diets, .filters-panel .duree, .filters-panel .tag-cloud { margin: 0; padding: 10px 0; border-top: 1px solid var(--border); }
 .filters-panel .diets .tags, .filters-panel .tag-cloud .tags { margin: 8px 0 0; }
-.filters-panel .diets .diet { font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap; font-weight: 400; }
 .filters-panel .duree .filter-title { cursor: default; margin-bottom: 6px; }
 .filters-panel details > summary.filter-title { display: flex; background: none; padding: 0; border-radius: 0; }
 
@@ -470,8 +469,6 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 /* Bloc « Personnes » : même présentation que Régimes */
 .filters-panel .people { margin: 0; padding: 10px 0; border-top: 1px solid var(--border); }
 .filters-panel .people .tags { margin: 8px 0 0; }
-.filters-panel .people .person { font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap; }
-.filters-panel .people .person .count { color: var(--muted); font-size: .85em; }
 
 /* Relecture par la famille (page recette) : questions, case « Conforme », signalement */
 .revue h3 { font-size: 1rem; margin: 16px 0 8px; }
@@ -561,16 +558,9 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .card-review[data-state="questions"] { color: var(--warn); }
 .filters-panel .review-filter { margin: 0; padding: 10px 0; border-top: 1px solid var(--border); }
 .filters-panel .review-filter .tags { margin: 8px 0 0; }
-.filters-panel .review-filter .review {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-decoration: none; white-space: nowrap;
-}
-.filters-panel .review-filter .review .count { color: var(--muted); font-size: .85em; }
-.filters-panel .review-filter .review[data-state="ok"] .icon { color: var(--ok); }
-.filters-panel .review-filter .review[data-state="questions"] .icon { color: var(--warn); }
 .filter-pill .icon-check { color: var(--ok); }
 .filter-pill .icon-alert { color: var(--warn); }
-.filters-panel .review-filter .review[data-state="a-verifier"] .icon, .filter-pill .icon-circle { color: var(--muted); }
+.filter-pill .icon-circle { color: var(--muted); }
 
 /* Avertissements de l'aperçu (ex. référence @& introuvable) */
 .warning { background: #fdf3e1; color: #7a4a06; padding: 8px 12px; border-radius: var(--radius); margin: 0 0 8px; font-size: .9rem; }
@@ -622,12 +612,18 @@ button.timer.watch.running { background: var(--warn); }
 .glossary-missing ul { margin: 0; padding-left: 18px; }
 .admin-list .hint { color: #7a4a06; background: #fdf3e1; border-radius: 6px; padding: 0 6px; font-size: .8rem; }
 
-/* Option de filtre active (personne, régime, étiquette, relecture) : même rendu partout, pleine ;
-   un clic la retire. */
-.tags a[aria-current="true"],
-.filters-panel .people .person[aria-current="true"],
-.filters-panel .diets .diet[aria-current="true"],
-.filters-panel .review-filter .review[aria-current="true"] { background: var(--accent); color: var(--surface); }
-.tags a[aria-current="true"] .count,
-.filters-panel a[aria-current="true"] .count { color: inherit; opacity: .8; }
-.filters-panel .review-filter .review[aria-current="true"] .icon { color: inherit; }
+/* Options des filtres du panneau (personnes, régimes, étiquettes, relecture) : un seul composant,
+   .option + son type (views.js). Les thèmes ne stylent que .option. Active : pleine ; un clic la retire. */
+.filters-panel .option {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  font-size: .8rem; font-weight: 400; padding: 2px 10px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); text-decoration: none;
+}
+.filters-panel .option:hover { text-decoration: none; filter: brightness(.96); }
+.filters-panel .option .count { color: var(--muted); font-size: .85em; }
+.filters-panel .option[aria-current="true"] { background: var(--accent); color: var(--surface); }
+.filters-panel .option[aria-current="true"] .count { color: inherit; opacity: .8; }
+.filters-panel .option.review[data-state="ok"] .icon { color: var(--ok); }
+.filters-panel .option.review[data-state="questions"] .icon { color: var(--warn); }
+.filters-panel .option.review[data-state="a-verifier"] .icon { color: var(--muted); }
+.filters-panel .option[aria-current="true"] .icon { color: inherit; }
