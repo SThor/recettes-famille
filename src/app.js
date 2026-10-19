@@ -106,14 +106,19 @@ function createApp({
   // + durée maximum (?duree=minutes), sur le temps total ou sur la préparation seule (?temps=prep).
   app.get('/', (req, res) => {
     const param = name => (typeof req.query[name] === 'string' ? req.query[name].trim() : '');
-    const tag = param('tag');
+    // Étiquettes : ?tag=a&tag=b → recettes qui ont toutes ces étiquettes (doublons et casse ignorés).
+    const selectedTags = [];
+    for (const v of [].concat(req.query.tag || [])) {
+      const s = typeof v === 'string' ? v.trim() : '';
+      if (s && !selectedTags.some(x => normValue(x) === normValue(s))) selectedTags.push(s);
+    }
     const regime = param('regime');
     const personne = param('personne');
     const relecture = REVIEW_STATES.some(([k]) => k === param('relecture')) ? param('relecture') : '';
     const duree = /^\d{1,4}$/.test(param('duree')) && Number(param('duree')) > 0 ? Number(param('duree')) : null;
     const temps = param('temps') === 'prep' ? 'prep' : 'total';
     const has = (values, wanted) => values.some(x => normValue(x) === normValue(wanted));
-    const base = r => (!tag || has(r.tags, tag)) && (!regime || has(asList(r.meta.diet), regime)) && (!personne || has(peopleOf(r), personne))
+    const base = r => selectedTags.every(tg => has(r.tags, tg)) && (!regime || has(asList(r.meta.diet), regime)) && (!personne || has(peopleOf(r), personne))
       && (!relecture || reviewStateOf(r) === relecture);
     const minutes = r => (temps === 'prep' ? r.durations.prep : r.durations.total);
     // Les recettes hors durée restent dans la page, masquées : le curseur peut les réafficher en direct.
@@ -122,14 +127,34 @@ function createApp({
     // Recettes écartées faute de durée renseignée (signalées sous le bandeau).
     const unknown = duree ? store.all().filter(r => base(r) && minutes(r) == null).length : 0;
     // Paramètres de filtre actuels, dans l'ordre de l'URL (pour construire les liens).
-    const params = Object.entries(req.query).filter(([k, v]) => ['tag', 'regime', 'personne', 'relecture', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
-    res.send(views.home({ account: req.account, relecture, reviews: REVIEW_STATES.map(([key, label]) => ({ key, label, count: store.all().filter(r => reviewStateOf(r) === key).length })), groups, fits, theme: req.theme, tag, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
+    // (une clé répétée, comme tag, donne une entrée par valeur)
+    const params = Object.entries(req.query).flatMap(([k, v]) => [].concat(v).map(x => [k, x]))
+      .filter(([k, v]) => ['tag', 'regime', 'personne', 'relecture', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
+    res.send(views.home({ account: req.account, relecture, reviews: REVIEW_STATES.map(([key, label]) => ({ key, label, count: store.all().filter(r => reviewStateOf(r) === key).length })), groups, fits, theme: req.theme, selectedTags, tagInfo: store.tagInfo, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
   });
 
   app.get('/recette/:slug', (req, res) => {
     const r = store.get(req.params.slug);
     if (!r) return res.status(404).send(views.notFound({ theme: req.theme }));
-    res.send(views.recipe({ r, theme: req.theme, account: req.account, merci: req.query.merci }));
+    res.send(views.recipe({ r, theme: req.theme, account: req.account, merci: req.query.merci, tagInfo: store.tagInfo }));
+  });
+
+  // --- Étiquettes : glossaire (Recettes/Étiquettes.md) et page de chaque étiquette ---
+  const countOf = name => store.tags().find(x => normValue(x.name) === normValue(name))?.count || 0;
+  app.get('/etiquettes', (req, res) => {
+    const glossary = store.glossary();
+    const families = glossary && glossary.map(f => ({ family: f.family, tags: f.tags.map(x => ({ ...x, count: countOf(x.name) })) }));
+    const missing = store.tags().filter(x => !store.tagInfo(x.name));
+    res.send(views.glossaryPage({ theme: req.theme, account: req.account, families, missing }));
+  });
+  app.get('/etiquette/:name', (req, res) => {
+    const wanted = req.params.name.trim();
+    const info = store.tagInfo(wanted);
+    const used = store.tags().find(x => normValue(x.name) === normValue(wanted));
+    if (!info && !used) return res.status(404).send(views.notFound({ theme: req.theme, account: req.account }));
+    const name = info?.name || used.name;
+    const groups = store.grouped(r => r.tags.some(tg => normValue(tg) === normValue(name)));
+    res.send(views.tagPage({ theme: req.theme, account: req.account, name, info, groups }));
   });
 
   app.get('/photos/*', (req, res) => {
@@ -196,7 +221,7 @@ function createApp({
     const typed = cleanName(req.body.prenom);
     if (typed) rememberName(req, res, typed);
     const who = typed || req.prenom;
-    const refuse = (status, error) => res.status(status).send(views.recipe({ r, theme: req.theme, account: { prenom: who }, error }));
+    const refuse = (status, error) => res.status(status).send(views.recipe({ r, theme: req.theme, account: { prenom: who }, error, tagInfo: store.tagInfo }));
     if (!who) { refuse(400, 'Indique ton prénom.'); return null; }
     return { r, who, refuse, full: path.join(RECIPES_DIR, r.file) };
   }

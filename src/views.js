@@ -1,4 +1,4 @@
-const { slugify, peopleOf } = require('./recipes');
+const { slugify, peopleOf, normValue } = require('./recipes');
 const { toSecondsRange, formatMinutes } = require('./durations');
 const { icon } = require('./icons');
 const { REVIEW_STATES, reviewStateOf } = require('./revue');
@@ -119,19 +119,24 @@ const DUREE_PRESETS = [15, 30, 60, 120];
 const SIDEBAR_ICON = icon('sidebar');
 
 // URL de l'accueil à partir des filtres actuels (dans l'ordre de l'URL), avec des modifications :
-// valeur = remplacer/ajouter, null = retirer.
+// valeur = remplacer/ajouter (une liste = clé répétée, ex. tag), null = retirer.
 function homeUrl(params, changes = {}) {
   const entries = params.filter(([k]) => !(k in changes));
-  for (const [k, v] of Object.entries(changes)) if (v != null) entries.push([k, String(v)]);
+  for (const [k, v] of Object.entries(changes)) if (v != null) for (const x of [].concat(v)) entries.push([k, String(x)]);
   // Garder l'ordre d'origine pour les clés modifiées qui existaient déjà.
   const order = params.map(([k]) => k);
   entries.sort((a, b) => (order.includes(a[0]) ? order.indexOf(a[0]) : 99) - (order.includes(b[0]) ? order.indexOf(b[0]) : 99));
   return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
 }
 
-function home({ account, relecture = '', reviews = [], groups, fits = () => true, theme, tag = '', regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
+function home({ account, relecture = '', reviews = [], groups, fits = () => true, theme, selectedTags = [], tagInfo = () => null, regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
+  // Étiquettes choisies (plusieurs possibles) : lien avec une autre sélection d'étiquettes.
+  const isSelected = name => selectedTags.some(x => normValue(x) === normValue(name));
+  const withTags = list => homeUrl(params, { tag: list.length ? list : null });
+  const withoutTag = name => withTags(selectedTags.filter(x => normValue(x) !== normValue(name)));
+  const tagTitle = name => (tagInfo(name)?.definition ? ` title="${esc(tagInfo(name).definition)}"` : '');
 
   // Filtres actifs en pastilles : une croix par filtre (retire ce filtre seulement),
   // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
@@ -139,13 +144,13 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
     regime && ['leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
     personne && ['person', `Personne : <b>${esc(personne)}</b>`, { personne: null }],
     relecture && [REVIEW_ICON[relecture], `Relecture : <b>${esc((REVIEW_STATES.find(([k]) => k === relecture) || [])[1])}</b>`, { relecture: null }],
-    tag && ['tag', `Étiquette : <b>${esc(tag)}</b>`, { tag: null }],
+    ...selectedTags.map(tg => ['tag', `Étiquette : <b>${esc(tg)}</b>`, { tag: selectedTags.filter(x => x !== tg).length ? selectedTags.filter(x => x !== tg) : null }]),
     duree && ['timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
   const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([iconName, label, remove]) =>
     `<li class="filter-pill"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
-  ${active.length && !count ? `<p class="empty">${tag && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
+  ${active.length && !count ? `<p class="empty">${selectedTags.length === 1 && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
   // Ligne d'outils au-dessus des deux colonnes : bouton pour replier / déplier le panneau (à gauche,
   // il ne bouge pas quand le panneau se replie) et nombre de recettes.
@@ -166,9 +171,14 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
     <summary class="filter-title">${icon('check', 16)} Relecture</summary>
     <div class="tags">${reviews.map(x => `<a class="review" data-state="${x.key}" href="${esc(homeUrl(params, { relecture: x.key }))}"${x.key === relecture ? ' aria-current="true"' : ''}>${icon(REVIEW_ICON[x.key], 14)}${esc(x.label)} <span class="count">${x.count}</span></a>`).join('')}</div>
   </details>` : '';
-  const tagCloud = tags.length ? `<details class="tag-cloud"${tag ? ' open' : ''}>
+  // Une étiquette s'ajoute aux étiquettes déjà choisies ; une étiquette choisie se retire au clic.
+  const tagCloud = tags.length ? `<details class="tag-cloud"${selectedTags.length ? ' open' : ''}>
     <summary class="filter-title">${icon('tag', 16)} Étiquettes <span class="count">${tags.length}</span></summary>
-    <div class="tags">${tags.map(x => `<a class="tag" href="${esc(homeUrl(params, { tag: x.name }))}">${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
+    <div class="tags">${tags.map(x => (isSelected(x.name)
+      ? `<a class="tag" href="${esc(withoutTag(x.name))}" aria-current="true"${tagTitle(x.name)}>`
+      : `<a class="tag" href="${esc(withTags([...selectedTags, x.name]))}"${tagTitle(x.name)}>`)
+      + `${esc(x.name)} <span class="count">${x.count}</span></a>`).join('')}</div>
+    <p class="glossary-link"><a href="/etiquettes">Toutes les étiquettes et leur définition</a></p>
   </details>` : '';
 
   // Curseur : position = premier cran ≥ durée demandée ; sans durée = dernier cran (sans limite).
@@ -273,7 +283,8 @@ function relatedHtml(related) {
 
 const asText = v => (Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v ? v.name || '' : String(v));
 
-function recipeArticle(r, { back = true, originals = true } = {}) {
+// tagInfo(nom) → { definition, family } du glossaire (info-bulle des étiquettes), ou null.
+function recipeArticle(r, { back = true, originals = true, tagInfo = () => null } = {}) {
   const m = r.meta;
   const servings = Number(m.servings) || null;
   // Clé maison « servings unit » (bouchons, cookies, parts…) ; sinon des personnes.
@@ -314,7 +325,7 @@ function recipeArticle(r, { back = true, originals = true } = {}) {
   ${r.photo ? `<img class="hero" src="/photos/${enc(r.photo)}" alt="${esc(r.title)}">` : ''}
   <h1>${esc(r.title)}</h1>
   ${m.description ? `<p class="description">${esc(m.description)}</p>` : ''}
-  ${r.tags.length ? `<p class="tags">${icon('tag', 16)}${r.tags.map(t => `<a class="tag" href="/?tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join('')}</p>` : ''}
+  ${r.tags.length ? `<p class="tags">${icon('tag', 16)}${r.tags.map(t => `<a class="tag" href="/etiquette/${encodeURIComponent(t)}"${tagInfo(t)?.definition ? ` title="${esc(tagInfo(t).definition)}"` : ''}>${esc(t)}</a>`).join('')}</p>` : ''}
   ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
   ${relatedHtml(r.related)}
 
@@ -423,7 +434,7 @@ const sideToggle = (id, iconName, label, extra = '') =>
 
 // Page recette en trois colonnes, repliées par défaut : fiche d'origine | recette | relecture.
 // La relecture s'ouvre d'elle-même après une action (message de confirmation ou erreur).
-function recipe({ r, theme, account = null, merci = '', error = '' }) {
+function recipe({ r, theme, account = null, merci = '', error = '', tagInfo }) {
   const st = reviewStatus(r);
   const reviewOpen = Boolean(MERCI[merci] || error);
   const left = r.originals.length
@@ -441,7 +452,7 @@ function recipe({ r, theme, account = null, merci = '', error = '' }) {
   </div>`;
   const body = `<div class="recipe-layout">
   ${left}
-  <div class="recipe-center">${recipeArticle(r, { originals: false })}</div>
+  <div class="recipe-center">${recipeArticle(r, { originals: false, tagInfo })}</div>
   ${right}
 </div>`;
   return layout({ title: r.title, theme, account, body, bodyClass: 'page-recipe' });
@@ -505,8 +516,46 @@ function essais({ theme, account }) {
 }
 
 
+const nbRecettes = n => (n ? `${n} recette${n > 1 ? 's' : ''}` : 'aucune recette');
+const tagHref = name => `/etiquette/${encodeURIComponent(name)}`;
+
+// Page « Étiquettes » : le glossaire (Recettes/Étiquettes.md) par famille, avec définitions et nombre
+// de recettes, puis les étiquettes utilisées mais pas encore définies.
+// families : [{ family, tags: [{ name, definition, count }] }] (null sans glossaire) ; missing : [{ name, count }]
+function glossaryPage({ theme, account, families, missing }) {
+  const item = (x, definition) => `<li><a class="tag" href="${tagHref(x.name)}">${esc(x.name)}</a> <span class="count">${nbRecettes(x.count)}</span>${definition ? `<p class="definition">${esc(definition)}</p>` : ''}</li>`;
+  const body = `<section class="glossary">
+  <a class="back" href="/">← Toutes les recettes</a>
+  <h1>Étiquettes</h1>
+  <p class="muted">Chaque étiquette regroupe des recettes : clique dessus pour les voir.</p>
+  ${families ? families.map(f => `<h2>${esc(f.family)}</h2>
+  <ul class="glossary-list">${f.tags.map(x => item(x, x.definition)).join('')}</ul>`).join('\n') : '<p class="muted">Le glossaire (Étiquettes.md) n’existe pas encore.</p>'}
+  ${missing.length ? `<h2>Sans définition</h2>
+  <ul class="glossary-list">${missing.map(x => item(x)).join('')}</ul>` : ''}
+</section>`;
+  return layout({ title: 'Étiquettes', theme, account, body, bodyClass: 'page-glossary' });
+}
+
+// Page d'une étiquette : sa définition et ses recettes, comme un filtre figé (sans panneau de filtres) ;
+// un lien mène à l'accueil filtré pour la combiner avec d'autres filtres.
+function tagPage({ theme, account, name, info, groups }) {
+  const count = groups.reduce((n, g) => n + g.recipes.length, 0);
+  const body = `<section class="tag-page">
+  <a class="back" href="/etiquettes">← Toutes les étiquettes</a>
+  <h1>${icon('tag', 24)} ${esc(name)}</h1>
+  ${info?.family ? `<p class="family">${esc(info.family)}</p>` : ''}
+  ${info?.definition ? `<p class="definition">${esc(info.definition)}</p>` : '<p class="muted">Pas encore de définition dans le glossaire.</p>'}
+  <p class="tag-actions muted"><b>${nbRecettes(count)}</b>${count ? ` · <a href="/?tag=${encodeURIComponent(name)}">Combiner avec d’autres filtres</a>` : ''}</p>
+  ${count ? groups.map(g => `<section class="course">
+    <h2>${esc(g.label)}</h2>
+    <ul class="cards">${g.recipes.map(r => card(r)).join('')}</ul>
+  </section>`).join('') : '<p class="empty">Aucune recette pour l’instant.</p>'}
+</section>`;
+  return layout({ title: name, theme, account, body, bodyClass: 'page-tag' });
+}
+
 function notFound({ theme, account }) {
   return layout({ title: 'Introuvable', theme, account, body: `<section class="form-page center"><h1>Recette introuvable</h1><p><a href="/">Retour aux recettes</a></p></section>` });
 }
 
-module.exports = { THEMES, ASSET_V, esc, enc, layout, recipeArticle, home, recipe, proposeForm, thanks, login, essais, notFound };
+module.exports = { THEMES, ASSET_V, esc, enc, layout, recipeArticle, home, recipe, glossaryPage, tagPage, proposeForm, thanks, login, essais, notFound };

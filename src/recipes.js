@@ -3,6 +3,7 @@ const path = require('path');
 const { parse } = require('./cooklang');
 const { toMinutes } = require('./durations');
 const { questionsOf, threadsOf } = require('./revue');
+const { GLOSSARY_FILE, parseGlossary } = require('./glossaire');
 
 const PHOTO_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const COURSES = [
@@ -121,6 +122,15 @@ function countValues(recipes, valuesOf, { capitalized = false } = {}) {
 }
 const normValue = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 
+// Indice pour l'admin : des minuteurs dans les étapes mais pas de `cook time` dans l'en-tête.
+// On ne calcule rien (repos, minuteurs en parallèle, plages…) : on liste les minuteurs, l'humain décide.
+function cookTimeHint(r) {
+  if (r.meta['cook time']) return null;
+  const timers = r.items.filter(i => i.type === 'step').flatMap(i => i.parts.filter(p => p.type === 'timer' && p.quantity));
+  if (!timers.length) return null;
+  return `Pas de temps de cuisson ; minuteurs : ${timers.map(p => `${p.quantity}${p.unit ? ` ${p.unit}` : ''}`).join(' + ')}`;
+}
+
 // Personnes liées à une recette : de qui elle vient (`author`, clé standard Cooklang)
 // et qui l'a transmise si c'est quelqu'un d'autre (clé maison `shared by`).
 // Une personne à la fois auteur et origine (même prénom, casse ou espaces près) n'apparaît qu'une fois.
@@ -147,9 +157,23 @@ function createStore(dir) {
     }
     recipes.sort((a, b) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' }));
     linkRecipes(recipes);
+    // Glossaire des étiquettes, relu avec les recettes (null si le fichier n'existe pas).
+    const gpath = path.join(dir, GLOSSARY_FILE);
+    glossary = fs.existsSync(gpath) ? parseGlossary(fs.readFileSync(gpath, 'utf8')) : null;
     cache = recipes;
     cachedAt = Date.now();
     return recipes;
+  }
+  let glossary = null;
+
+  // Étiquette du glossaire (casse ignorée) : { name, definition, family } ; null si elle n'y est pas.
+  function tagInfo(name) {
+    load();
+    for (const f of glossary || []) {
+      const tag = f.tags.find(x => normValue(x.name) === normValue(name));
+      if (tag) return { ...tag, family: f.family };
+    }
+    return null;
   }
 
   return {
@@ -157,6 +181,15 @@ function createStore(dir) {
     all: load,
     get: slug => load().find(r => r.slug === slug),
     invalidate() { cache = null; },
+    glossary() { load(); return glossary; },
+    tagInfo,
+    // Étiquettes utilisées par au moins une recette mais absentes du glossaire : [{ name, recipes }].
+    missingTags() {
+      const recipes = load();
+      if (!glossary) return [];
+      return countValues(recipes, r => r.tags).filter(x => !tagInfo(x.name))
+        .map(x => ({ name: x.name, recipes: recipes.filter(r => r.tags.some(tg => normValue(tg) === normValue(x.name))) }));
+    },
     // Toutes les étiquettes (voir countValues).
     tags() { return countValues(load(), r => r.tags); },
     // Régimes (clé `diet`, texte ou liste), comptés comme les étiquettes.
@@ -182,4 +215,4 @@ function createStore(dir) {
   };
 }
 
-module.exports = { normValue, asList, peopleOf, createStore, fromSource, slugify, PHOTO_EXT, COURSES };
+module.exports = { normValue, asList, peopleOf, cookTimeHint, createStore, fromSource, slugify, PHOTO_EXT, COURSES };

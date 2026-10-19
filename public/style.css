@@ -604,3 +604,23 @@ button.timer.watch.running { background: var(--warn); }
 .timer-bar-watch, .timer-bar-fill { border-radius: 2px; }
 .timer-bar-reminder { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--warn); }
 .timer-reminder { flex: 1; margin: 0; padding: 6px 10px; text-align: center; font-size: .9rem; font-weight: 600; color: var(--warn); font-variant-numeric: tabular-nums; }
+
+/* Étiquettes : glossaire, page d'une étiquette, sélection multiple dans le nuage */
+.glossary-list { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 10px; }
+.glossary-list li { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.glossary-list .tag { font-weight: 700; color: var(--accent); text-decoration: none; }
+.glossary-list .count { color: var(--muted); font-size: .85rem; }
+.glossary-list .definition { margin: 4px 0 0; }
+.tag-page h1 { display: flex; align-items: center; gap: 10px; }
+.tag-page h1 .icon { color: var(--accent); }
+.tag-page .family { margin: -4px 0 6px; font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.tag-page .definition { font-size: 1.1rem; margin: 0 0 8px; }
+.tag-page .tag-actions { margin: 0 0 8px; }
+.tags .tag[aria-current="true"] { background: var(--accent); color: var(--surface); }
+.tags .tag[aria-current="true"] .count { color: inherit; opacity: .8; }
+.tag-cloud .glossary-link { margin: 8px 0 0; font-size: .85rem; }
+/* Admin : étiquettes hors glossaire, indice « temps de cuisson » */
+.glossary-missing { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--radius); background: #fdf3e1; color: #7a4a06; font-size: .9rem; }
+.glossary-missing p { margin: 0 0 4px; }
+.glossary-missing ul { margin: 0; padding-left: 18px; }
+.admin-list .hint { color: #7a4a06; background: #fdf3e1; border-radius: 6px; padding: 0 6px; font-size: .8rem; }

@@ -3,7 +3,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { fromSource, slugify, PHOTO_EXT } = require('./recipes');
+const { fromSource, slugify, cookTimeHint, PHOTO_EXT } = require('./recipes');
 const { parseTodo, serializeTodo, findItem } = require('./todo');
 const { setField, yamlList } = require('./frontmatter');
 const views = require('./views');
@@ -65,7 +65,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       let history = null;
       try { history = await git.log(15); } catch {}
       res.send(adminViews.dashboard({
-        theme: req.theme, user: req.user, recipes: store.all(), proposals: listProposals(), imported: listProposals('imported'),
+        theme: req.theme, user: req.user, recipes: store.all(), missingTags: store.missingTags(), proposals: listProposals(), imported: listProposals('imported'),
         todo: readTodo(), history, flash: req.query.ok,
       }));
     } catch (err) { next(err); }
@@ -112,7 +112,8 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     try {
       const r = fromSource(String(source || ''), 'apercu.cook', null);
       // Erreurs Cooklang (ex. référence @& introuvable) en tête de l'aperçu.
-      return r.problems.map(p => `<p class="warning">⚠ ${views.esc(p)}</p>`).join('') + views.recipeArticle(r, { back: false });
+      const warnings = [...r.problems, cookTimeHint(r)].filter(Boolean);
+      return warnings.map(p => `<p class="warning">⚠ ${views.esc(p)}</p>`).join('') + views.recipeArticle(r, { back: false });
     } catch (err) {
       return `<p class="error">${views.esc(err.message)}</p>`;
     }

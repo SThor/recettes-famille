@@ -82,10 +82,10 @@ test.describe('Site public (connecté)', () => {
       assert.match(await get('/recette/pounty'), /<p class="tags"><svg class="icon icon-tag"[^>]*aria-hidden="true">[\s\S]*?<\/svg><a class="tag"/);
     });
 
-    test('sur la page recette, chaque étiquette mène à l\'accueil filtré', async () => {
+    test('sur la page recette, chaque étiquette mène à sa page (voir etiquettes.test.js)', async () => {
       const html = await get('/recette/galette-seche');
-      assert.match(html, /<a class="tag" href="\/\?tag=galette%20des%20rois">galette des rois<\/a>/);
-      assert.match(await get('/recette/pounty'), /<a class="tag" href="\/\?tag=auvergne">auvergne<\/a>/);
+      assert.match(html, /<a class="tag" href="\/etiquette\/galette%20des%20rois">galette des rois<\/a>/);
+      assert.match(await get('/recette/pounty'), /<a class="tag" href="\/etiquette\/auvergne">auvergne<\/a>/);
     });
 
     test('l\'accueil ne garde que les recettes portant l\'étiquette', async () => {

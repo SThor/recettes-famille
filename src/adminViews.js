@@ -1,4 +1,5 @@
 const { esc, enc, layout, ASSET_V } = require('./views');
+const { cookTimeHint } = require('./recipes');
 
 const yes = ok => `<span class="badge ${ok ? 'ok' : 'ko'}">${ok ? '✓' : '✗'}</span>`;
 
@@ -25,7 +26,7 @@ const FILTERS = [
 ];
 const wikiText = s => esc(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a);
 
-function dashboard({ theme, user, recipes, proposals, imported = [], todo, history, flash }) {
+function dashboard({ theme, user, recipes, missingTags = [], proposals, imported = [], todo, history, flash }) {
   const n = recipes.length;
   const count = f => recipes.filter(f).length;
   const stats = [
@@ -70,6 +71,10 @@ function dashboard({ theme, user, recipes, proposals, imported = [], todo, histo
   <div class="filters" role="group" aria-label="Filtrer les recettes">
     ${FILTERS.map(([id, label]) => `<button type="button" class="filter" data-filter="${id}" aria-pressed="${id === 'toutes'}">${label} <span class="count">${id === 'toutes' ? n : recipes.filter(r => recipeFlags(r).includes(id)).length}</span></button>`).join('')}
   </div>
+  ${missingTags.length ? `<div class="glossary-missing">
+    <p><b>⚠ Étiquettes absentes du glossaire</b> <span class="muted small">(à définir dans Recettes/Étiquettes.md, voir <a href="/etiquettes">la page Étiquettes</a>)</span></p>
+    <ul>${missingTags.map(x => `<li><b>${esc(x.name)}</b> : ${x.recipes.map(r => `<a href="/admin/recettes/${r.slug}">${esc(r.title)}</a>`).join(', ')}</li>`).join('')}</ul>
+  </div>` : ''}
   <p class="muted filter-empty" hidden>Aucune recette pour ce filtre.</p>
   <ul class="admin-list recipes-status">
   ${recipes.map(r => `<li data-flags="${recipeFlags(r).join(' ')}">
@@ -83,6 +88,7 @@ function dashboard({ theme, user, recipes, proposals, imported = [], todo, histo
       <span>Source ${yes(r.meta.source)}</span>
       <span>Portions ${yes(r.meta.servings)}</span>
       <span>Photo ${yes(r.photo)}</span>
+      ${cookTimeHint(r) ? `<span class="hint">${esc(cookTimeHint(r))}</span>` : ''}
     </div>
     <form method="post" action="/admin/recettes/${r.slug}/verifie" class="verify">
       <label title="Relue et conforme à la recette d’origine, sans question en suspens"><input type="checkbox" name="verifie" ${r.meta['checked by'] ? 'checked' : ''} onchange="this.form.submit()">

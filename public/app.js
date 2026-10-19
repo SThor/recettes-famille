@@ -380,7 +380,12 @@ document.querySelectorAll('.site-footer a[data-theme]').forEach(link => link.add
   let matches = [];
   let active = -1;
 
-  const go = tag => { location.href = `/?tag=${encodeURIComponent(tag.name)}`; };
+  // L'étiquette choisie s'ajoute à celles déjà sélectionnées (et aux autres filtres de l'URL).
+  const go = tag => {
+    const url = new URL(location.href);
+    if (!url.searchParams.getAll('tag').some(x => x.toLowerCase() === tag.name.toLowerCase())) url.searchParams.append('tag', tag.name);
+    location.href = `/${url.search}`;
+  };
   const close = () => {
     list.hidden = true;
     input.setAttribute('aria-expanded', 'false');
