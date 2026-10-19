@@ -53,8 +53,11 @@
   background: linear-gradient(90deg, var(--rose), var(--accent));
 }
 .theme-pastel .card a { border: 0; }
-.theme-pastel .card:nth-child(3n+2) a { background: #fdf3ef; }
-.theme-pastel .card:nth-child(3n) a { background: #f3f6ee; }
+/* Cycle de cinq teintes : crème (fond de carte), rose, sauge, bleu ciel, beurre */
+.theme-pastel .card:nth-child(5n+2) a { background: #fdf3ef; }
+.theme-pastel .card:nth-child(5n+3) a { background: #f3f6ee; }
+.theme-pastel .card:nth-child(5n+4) a { background: #eef4f9; }
+.theme-pastel .card:nth-child(5n) a { background: #fbf6e3; }
 
 .theme-pastel .facts div { border: 0; background: var(--accent-soft); }
 .theme-pastel .facts div:nth-child(even) { background: var(--rose-soft); }

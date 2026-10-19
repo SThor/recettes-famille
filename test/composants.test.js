@@ -52,3 +52,17 @@ test.describe('Page de test des composants', () => {
     assert.deepEqual([...new Set(hrefs)], ['#']);
   });
 });
+
+test('pastel : les cartes tournent sur cinq teintes, toutes visibles sur la page de test', async () => {
+  const fs = require('fs');
+  const css = fs.readFileSync(require('path').join(__dirname, '..', 'public', 'themes', 'pastel.css'), 'utf8');
+  const rules = [...css.matchAll(/\.theme-pastel \.card:nth-child\(5n(\+\d)?\) a \{ background: (#[0-9a-f]{6}); \}/g)];
+  assert.equal(rules.length, 4, 'quatre teintes en plus du fond de carte');
+  assert.equal(new Set(rules.map(m => m[2])).size, 4);
+  const t = await startApp();
+  try {
+    const html = await (await t.req('/composants')).text();
+    const pastel = html.split('<section class="specimen theme-pastel"')[1].split('<section class="specimen ')[0];
+    assert.ok((pastel.match(/<li class="card"/g) || []).length >= 5);
+  } finally { await t.close(); }
+});
