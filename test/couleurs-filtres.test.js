@@ -58,4 +58,11 @@ test.describe('Couleur par type de filtre', () => {
       assert.doesNotMatch(rule, /--accent/, sel);
     }
   });
+
+  test('option de relecture active : icône en variante claire de sa couleur (lisible sur le fond plein)', () => {
+    const src = css('style.css');
+    for (const [state, base] of [['ok', '--ok'], ['questions', '--warn'], ['a-verifier', '--muted']]) {
+      assert.match(src, new RegExp(`\\.filters-panel \\.option\\.review\\[aria-current="true"\\]\\[data-state="${state}"\\] \\.icon \\{ color: color-mix\\(in srgb, var\\(${base}\\) \\d+%, var\\(--surface\\)\\); \\}`), state);
+    }
+  });
 });
