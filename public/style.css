@@ -646,3 +646,14 @@ button.timer.watch.running { background: var(--warn); }
 .filters-panel .option.review[aria-current="true"][data-state="ok"] .icon { color: color-mix(in srgb, var(--ok) 40%, var(--surface)); }
 .filters-panel .option.review[aria-current="true"][data-state="questions"] .icon { color: color-mix(in srgb, var(--warn) 40%, var(--surface)); }
 .filters-panel .option.review[aria-current="true"][data-state="a-verifier"] .icon { color: color-mix(in srgb, var(--muted) 25%, var(--surface)); }
+
+/* Page de test des composants (/composants) : une colonne par thème, côte à côte si la place le permet. */
+.page-composants main { max-width: none; }
+.specimens { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.specimen { background: var(--bg); color: var(--text); font-family: var(--font); padding: 0 14px 20px; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
+.specimen-title { margin-top: .8em; }
+.specimen-label { font: 600 .75rem/1.2 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
+.specimen .site-header { position: static; margin: 0 -14px; }
+.specimen .filters-panel { position: static; max-height: none; transform: none; visibility: visible; box-shadow: none; border-radius: var(--radius); }
+.specimen .cards { grid-template-columns: 1fr; }
+.specimen .course h2 { margin-top: 0; }

@@ -20,7 +20,7 @@ const themeAssets = theme => (theme === 'simple' ? { css: '', fonts: '' } : {
   fonts: `/static/fonts/${theme}.css?v=${ASSET_V}`,
 });
 
-function layout({ title, theme, body, bodyClass = '', account = null }) {
+function layout({ title, theme, body, bodyClass = '', account = null, head = '', scripts = true }) {
   const assets = themeAssets(theme);
   return `<!doctype html>
 <html lang="fr">
@@ -32,6 +32,7 @@ function layout({ title, theme, body, bodyClass = '', account = null }) {
 ${assets.fonts ? `<link rel="stylesheet" id="fonts-css" href="${assets.fonts}">` : ''}
 <link rel="stylesheet" href="/static/style.css?v=${ASSET_V}">
 ${assets.css ? `<link rel="stylesheet" id="theme-css" href="${assets.css}">` : ''}
+${head}
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍲</text></svg>">
 </head>
 <body class="theme-${theme} ${bodyClass}">
@@ -51,9 +52,9 @@ ${body}
     }).join(' · ')}
   </p>
 </footer>
-<script src="/static/timer-state.js?v=${ASSET_V}" defer></script>
+${scripts ? `<script src="/static/timer-state.js?v=${ASSET_V}" defer></script>
 <script src="/static/quantites.js?v=${ASSET_V}" defer></script>
-<script src="/static/app.js?v=${ASSET_V}" defer></script>
+<script src="/static/app.js?v=${ASSET_V}" defer></script>` : ''}
 </body>
 </html>`;
 }
@@ -129,6 +130,14 @@ function homeUrl(params, changes = {}) {
   return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
 }
 
+// Option d'un filtre du panneau (personne, régime, étiquette, relecture) : un seul composant, classe
+// « option » + son type. Active → marquée (aria-current) ; href = où mène le clic (la choisir ou la retirer).
+const option = ({ kind, href, active, label, count, title = '', attrs = '', before = '' }) =>
+  `<a class="option ${kind}"${attrs} href="${esc(href)}"${active ? ' aria-current="true"' : ''}${title ? ` title="${esc(title)}"` : ''}>${before}${esc(label)} <span class="count">${count}</span></a>`;
+// Pastille d'un filtre actif (classe = type, même couleur que ses options) ; label en HTML.
+const filterPill = (kind, iconName, label, removeHref) =>
+  `<li class="filter-pill ${kind}"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(removeHref)}" aria-label="Retirer ce filtre">×</a></li>`;
+
 function home({ account, relecture = '', reviews = [], groups, fits = () => true, theme, selectedTags = [], tagInfo = () => null, regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
@@ -136,10 +145,6 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   const isSelected = name => selectedTags.some(x => normValue(x) === normValue(name));
   const withTags = list => homeUrl(params, { tag: list.length ? list : null });
   const withoutTag = name => withTags(selectedTags.filter(x => normValue(x) !== normValue(name)));
-  // Option d'un filtre du panneau (personne, régime, étiquette, relecture) : un seul composant, classe
-  // « option » + son type. Active → marquée (aria-current) ; href = où mène le clic (la choisir ou la retirer).
-  const option = ({ kind, href, active, label, count, title = '', attrs = '', before = '' }) =>
-    `<a class="option ${kind}"${attrs} href="${esc(href)}"${active ? ' aria-current="true"' : ''}${title ? ` title="${esc(title)}"` : ''}>${before}${esc(label)} <span class="count">${count}</span></a>`;
   // Filtre à une seule valeur (personne, régime, relecture) : choisir remplace, rechoisir retire.
   const single = (kind, key, value, label, count, active, extra = {}) =>
     option({ kind, label, count, active, href: homeUrl(params, { [key]: active ? null : value }), ...extra });
@@ -154,7 +159,7 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
     duree && ['duree', 'timer', `Durée : <b>${formatMinutes(duree)} max</b> (${temps === 'prep' ? 'préparation' : 'temps total'})`, { duree: null, temps: null }],
   ].filter(Boolean);
   const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([kind, iconName, label, remove]) =>
-    `<li class="filter-pill ${kind}"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(homeUrl(params, remove))}" aria-label="Retirer ce filtre">×</a></li>`).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
+    filterPill(kind, iconName, label, homeUrl(params, remove))).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
   ${active.length && !count ? `<p class="empty">${selectedTags.length === 1 && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
@@ -564,4 +569,4 @@ function notFound({ theme, account }) {
   return layout({ title: 'Introuvable', theme, account, body: `<section class="form-page center"><h1>Recette introuvable</h1><p><a href="/">Retour aux recettes</a></p></section>` });
 }
 
-module.exports = { THEMES, ASSET_V, esc, enc, layout, recipeArticle, home, recipe, glossaryPage, tagPage, proposeForm, thanks, login, essais, notFound };
+module.exports = { THEMES, ASSET_V, REVIEW_ICON, esc, enc, themeAssets, layout, card, option, filterPill, recipeArticle, home, recipe, glossaryPage, tagPage, proposeForm, thanks, login, essais, notFound };

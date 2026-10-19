@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { createStore, slugify, normValue, asList, peopleOf } = require('./recipes');
 const views = require('./views');
+const { componentsPage } = require('./composants');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
 const { fontsRouter } = require('./fonts');
@@ -93,6 +94,8 @@ function createApp({
     res.cookie('theme', req.params.theme, { ...cookieOpts(req), httpOnly: false });
     res.redirect(backTo(req));
   });
+  // Page de test des composants (exemples fictifs) : comme les styles d'essai, sans connexion.
+  app.get('/composants', (req, res) => res.send(componentsPage({ account: req.account })));
 
   // --- Suivi / modération (mot de passe admin, en Basic Auth) ---
   app.use('/admin', adminRouter({ store, git, dataDir: path.dirname(SUBMISSIONS_DIR), adminPassword: ADMIN_PASSWORD, safeEqual }));

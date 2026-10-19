@@ -13,7 +13,7 @@ Web app Node/Express du livre de recettes (voir README.md).
 « Déployer » = `git push` sur `main` (le workflow GitHub Actions teste puis déploie) ; `deploy/deploy.sh` seulement en secours. Vérifier ensuite l'issue avec `gh run watch --exit-status` (sortie courte), pas en relançant les tests.
 - **Déployer moins souvent** : regrouper les changements ; déployer en fin de sujet ou quand Paul le demande, pas après chaque retouche. Ne pas lancer `npm test` juste avant un déploiement qui relance déjà les tests.
 - **Vérifier sans images d'abord** : texte de la page, structure, styles calculés (`getComputedStyle`) via les outils du navigateur. Capture seulement pour un vrai changement de mise en page, à échelle réduite, pas une par thème si les valeurs mesurées suffisent.
-- **Page de test des composants** (à créer si absente) : elle affiche les composants dans les trois thèmes ; l'utiliser autant que possible pour valider les changements graphiques (composants, règles de style), et n'en capturer que les parties modifiées.
+- **Page de test des composants** : `/composants` (`src/composants.js`) montre les composants dans les trois thèmes côte à côte. L'utiliser autant que possible pour valider les changements graphiques (composants, règles de style) et n'en capturer que les parties modifiées (`[data-part=…]`) ; y ajouter tout nouveau composant.
 - **Sorties courtes** : filtrer la sortie des tests (`grep` sur le résumé) ; ne relire d'un fichier que la partie utile.
 - **Sessions courtes** : une session par sujet ; ce fichier et la mémoire suffisent pour reprendre.
 - Ne pas rouvrir les décisions déjà prises (voir README.md).
