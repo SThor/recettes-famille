@@ -24,7 +24,7 @@ RECIPES_DIR="<vault>/Recettes" npm run dev
 npm test
 ```
 
-`node:test`, sans dépendance. Unitaires (parseur Cooklang, `À demander.md`, en-tête YAML), intégration HTTP sur un dépôt git jetable (accès, admin, éditeur, propositions, conflits), et script de synchro (fusion, conflit). `deploy/deploy.sh` les lance avant de déployer. Règle : on écrit les tests avant la fonctionnalité (voir CLAUDE.md).
+`node:test`, sans dépendance. Unitaires (parseur Cooklang, `À demander.md`, en-tête YAML), intégration HTTP sur un dépôt git jetable (accès, admin, éditeur, propositions, conflits), et script de synchro (fusion, conflit). GitHub Actions les lance à chaque push (et `deploy/deploy.sh` avant un déploiement manuel). Règle : on écrit les tests avant la fonctionnalité (voir CLAUDE.md).
 
 ## Recettes : synchro git dans les deux sens
 
@@ -46,8 +46,10 @@ Télécharge les propositions en attente (`data/a-moderer/`) et crée pour chacu
 
 `recettes.touco.top` → nginx → conteneur Docker sur `127.0.0.1:8081`. Dans `~/recettes-famille` : `.env` (non versionné), `recettes/` (dépôt git, monté en écriture), `data/` (propositions).
 
+Déployer le code = `git push` sur `main` (dépôt public `SThor/recettes-famille`) : `.github/workflows/deploy.yml` lance les tests puis, s'ils passent, envoie l'archive du code (`deploy/archive-code.sh`) par SSH au VPS, où `~/bin/recettes-deploy.sh` (copie de `deploy/vps-recevoir.sh`) la décompresse et reconstruit le conteneur. La clé SSH de GitHub est dédiée et limitée à ce script (`restrict,command=` dans `authorized_keys`). Secrets du dépôt : `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KNOWN_HOSTS`.
+
 ```bash
-deploy/deploy.sh          # code seulement, rebuild du conteneur
+deploy/deploy.sh          # secours : déploiement manuel du code (--skip-tests ; tests sautés s'ils ont déjà passé sur ce commit)
 deploy/sync-recettes.sh   # recettes, dans les deux sens
 ```
 
