@@ -29,7 +29,6 @@ function specimen(theme, label) {
     cardSample('Carte vérifiée', 'checked by: Paul\ndiet: Végétarien\n'),
     fromSource(`---\ntitle: Carte avec questions\nservings: 2\n---\nMélanger. -- une question`, 'q.cook', null),
     cardSample('Quatrième carte', ''),
-    cardSample('Cinquième carte', ''),
   ];
   const opts = (kind, items, extra = () => ({})) => items.map(([lbl, count, active], i) => option({ kind, href: '#', label: lbl, count, active, ...extra(i) })).join('');
   const reviews = [['ok', 'Vérifiées'], ['questions', 'Questions'], ['a-verifier', 'À vérifier']];
