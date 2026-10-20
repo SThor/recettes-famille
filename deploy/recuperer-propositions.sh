@@ -35,7 +35,6 @@ for id in $ids; do
   case "$result" in
     importee*) echo "✓ ${result#importee }"; count=$((count + 1)) ;;
     deja-present*) echo "• ${result#deja-present } (déjà dans le vault, non écrasé)" ;;
-    demande*) echo "· ${result#demande } : demande sans contenu, à rédiger dans l'admin (laissée sur le site)"; continue ;;
   esac
   # La copie est faite (ou était déjà là) : on range la proposition côté serveur.
   remote "mkdir -p $(q "$DATA")/importees && mv $(q "$DATA/a-moderer/$id") $(q "$DATA/importees/$id")"

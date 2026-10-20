@@ -3,7 +3,8 @@
 //   node proposition-md.js <dossier de la proposition> <dossier Propositions du vault>
 // Crée « <date> - <titre>/ » avec « <titre>.md » (note Obsidian) et les photos.
 // N'écrase jamais un dossier existant (déjà importé, ou retravaillé par l'agent du vault).
-// Affiche « importee <dossier> », « deja-present <dossier> » ou « demande <titre> » (laissée sur le serveur).
+// Affiche « importee <dossier> » ou « deja-present <dossier> ».
+// Une demande (type « demande » : titre + commentaire, sans recette) est importée comme les autres.
 const fs = require('fs');
 const path = require('path');
 
@@ -17,12 +18,6 @@ const titre = safe(info.titre);
 const date = id.slice(0, 10); // l'identifiant commence par la date ISO
 const folder = path.join(destRoot, `${date} - ${titre}`);
 
-// Demande encore vide (rien que le titre) : elle se rédige dans l'admin du site, pas dans le vault.
-if (info.type === 'demande' && !String(info.texte || '').trim() && !(info.photos || []).length) {
-  console.log(`demande ${info.titre || titre}`);
-  process.exit(0);
-}
-
 if (fs.existsSync(folder)) {
   console.log(`deja-present ${path.basename(folder)}`);
   process.exit(0);
@@ -30,6 +25,7 @@ if (fs.existsSync(folder)) {
 
 const photos = (info.photos || []).filter(p => /^[\w.-]+$/.test(p) && fs.existsSync(path.join(src, p)));
 const yaml = s => JSON.stringify(String(s || '')); // valeur YAML sûre (guillemets si besoin)
+const demande = info.type === 'demande';
 const md = [
   '---',
   'type: proposition',
@@ -39,11 +35,12 @@ const md = [
   '---',
   `# ${info.titre || titre}`,
   '',
-  `Proposée sur le site par **${info.prenom || '?'}** le ${info.date || date}.`,
+  `${demande ? 'Demandée' : 'Proposée'} sur le site par **${info.prenom || '?'}** le ${info.date || date}.`,
   '',
+  ...(demande ? ['## Demande', '', [info.categorie, info.note].filter(Boolean).join(' — ') || '(sans commentaire)', ''] : []),
   '## Recette',
   '',
-  String(info.texte || '(pas de texte, voir les photos)').replace(/\r\n/g, '\n').trim(),
+  String(info.texte || (demande && !photos.length ? '(à demander)' : '(pas de texte, voir les photos)')).replace(/\r\n/g, '\n').trim(),
   '',
   ...(info.anecdote ? ['## Anecdote', '', String(info.anecdote).replace(/\r\n/g, '\n').trim(), ''] : []),
   ...(photos.length ? ['## Photos', '', ...photos.map(p => `![[${p}]]`), ''] : []),

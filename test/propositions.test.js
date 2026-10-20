@@ -92,11 +92,14 @@ test('aucune proposition : message et rien d\'autre', { skip }, () => {
   assert.ok(!fs.existsSync(vault) || fs.readdirSync(vault).length === 0);
 });
 
-test('une demande encore vide reste sur le site (rédigée depuis l\'admin), pas dans le vault', { skip }, () => {
-  propose('2026-10-16T09-00-00-000Z-dem001', { type: 'demande', prenom: 'Paul', titre: 'Polenta', texte: '', note: 'Kenza', date: '16/10/2026' });
+test('une demande est importée dans le vault comme une proposition', { skip }, () => {
+  propose('2026-10-16T09-00-00-000Z-dem001', { type: 'demande', prenom: 'Paul', titre: 'Polenta', texte: '', note: 'Kenza (femme de [[Lou-Anne]])', categorie: 'Desserts', date: '16/10/2026' });
   const r = run();
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /Polenta.*demande/);
-  assert.deepEqual(fs.readdirSync(vault), [FOLDER]);
-  assert.ok(fs.existsSync(path.join(data, 'a-moderer', '2026-10-16T09-00-00-000Z-dem001', 'recette.json')));
+  const md = read('2026-10-16 - Polenta', 'Polenta.md');
+  assert.match(md, /^type: proposition$/m);
+  assert.match(md, /Demandée sur le site par \*\*Paul\*\* le 16\/10\/2026\./);
+  assert.match(md, /## Demande\n\nDesserts — Kenza \(femme de \[\[Lou-Anne\]\]\)\n/);
+  assert.match(md, /## Recette\n\n\(à demander\)/);
+  assert.ok(fs.existsSync(path.join(data, 'importees', '2026-10-16T09-00-00-000Z-dem001', 'recette.json')));
 });
