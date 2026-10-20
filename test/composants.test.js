@@ -31,7 +31,7 @@ test.describe('Page de test des composants', () => {
     const cols = html.split('<section class="specimen ').slice(1);
     const kinds = ['person', 'diet', 'duree', 'tag', 'review'];
     for (const col of cols) {
-      for (const id of ['boutons', 'filtres', 'pastilles', 'cartes', 'recette']) assert.match(col, new RegExp(`data-part="${id}"`), id);
+      for (const id of ['boutons', 'filtres', 'pastilles', 'cartes', 'recette', 'propositions']) assert.match(col, new RegExp(`data-part="${id}"`), id);
       // Options du panneau de filtres : chaque type, inactive et active.
       for (const k of kinds.filter(k => k !== 'duree')) {
         assert.match(col, new RegExp(`<a class="option ${k}"[^>]*href="#"[^>]*>`), `option ${k}`);

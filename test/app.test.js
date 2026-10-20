@@ -491,7 +491,7 @@ test.describe('Admin', () => {
   });
 
   test.describe('Onglets du suivi', () => {
-    const PANELS = ['propositions', 'recettes', 'a-demander', 'historique'];
+    const PANELS = ['propositions', 'recettes', 'historique'];
     const dashboard = async () => (await t.admin('/admin')).text();
     const between = (html, start, end) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)));
 
@@ -519,9 +519,13 @@ test.describe('Admin', () => {
       assert.match(await dashboard(), /data-default-tab="propositions"/);
     });
 
+    test('plus d’onglet « À demander » : les demandes sont des propositions', async () => {
+      assert.doesNotMatch(await dashboard(), /href="#a-demander"/);
+    });
+
     test('après une action, on revient sur le bon onglet', async () => {
-      const res = await t.admin('/admin/a-demander/coche', { method: 'POST', body: t.form({ id: '1.2', titre: 'Polenta', fait: 'on' }) });
-      assert.match(res.headers.get('location'), /#a-demander$/);
+      const res = await t.admin('/admin/demandes', { method: 'POST', body: t.form({ titre: 'Polenta' }) });
+      assert.match(res.headers.get('location'), /#propositions$/);
     });
   });
 
@@ -610,29 +614,78 @@ test.describe('Admin', () => {
     assert.match(t.read('Pounty.cook'), /^checked by:$/m);
   });
 
-  test.describe('À demander', () => {
-    test('cocher, ajouter, retirer : un commit chacun, lignes libres conservées', async () => {
-      await t.admin('/admin/a-demander/coche', { method: 'POST', body: t.form({ id: '1.2', titre: 'Polenta', fait: 'on' }) });
-      assert.match(t.read('À demander.md'), /- \[x\] Polenta/);
-      await t.admin('/admin/a-demander/ajout', { method: 'POST', body: t.form({ section: '0', titre: 'Betteraves', note: 'Maman' }) });
-      assert.match(t.read('À demander.md'), /- \[ \] Salade au cumin — Kenza \(femme de \[\[Lou-Anne\]\]\)\n- \[ \] Betteraves — Maman\n/);
-      await t.admin('/admin/a-demander/suppr', { method: 'POST', body: t.form({ id: '0.0', titre: 'Carottes râpées' }) });
-      assert.doesNotMatch(t.read('À demander.md'), /Carottes/);
-      assert.match(t.read('À demander.md'), /une ligne libre à conserver/);
-      assert.equal(t.log(3).split('\n').length, 3);
+  test.describe('Demandes (= propositions sans contenu)', () => {
+    const data = (...p) => path.join(path.dirname(t.submissionsDir), ...p);
+    const listJson = state => (fs.existsSync(data(state)) ? fs.readdirSync(data(state)) : [])
+      .map(id => ({ id, ...JSON.parse(fs.readFileSync(data(state, id, 'recette.json'), 'utf8')) }));
+    const MARK = /^> Liste reprise par le site le .*\n/m;
+    // Remet « À demander.md » comme avant la fusion, puis relance le démarrage.
+    async function unmigrated() {
+      const before = t.read('À demander.md').replace(MARK, '');
+      fs.writeFileSync(path.join(t.recipesDir, 'À demander.md'), before);
+      await t.init();
+      return before;
+    }
+
+    test('migration : chaque ligne devient une proposition, le fichier est gardé intact + une ligne', async () => {
+      const before = await unmigrated();
+      const open = listJson('a-moderer');
+      assert.deepEqual(open.map(p => p.titre).sort(), ['Carottes râpées', 'Polenta', 'Salade au cumin']);
+      const salade = open.find(p => p.titre === 'Salade au cumin');
+      assert.equal(salade.type, 'demande');
+      assert.equal(salade.note, 'Kenza (femme de [[Lou-Anne]])');
+      assert.equal(salade.categorie, 'Entrées');
+      assert.deepEqual(salade.photos, []);
+      assert.match(salade.id, /^\d{4}-\d{2}-\d{2}T[\w-]+$/);
+      const done = listJson('traitees');
+      assert.deepEqual(done.map(p => [p.titre, p.recue]), [['Tarte au citron 😁', true]]);
+
+      const after = t.read('À demander.md');
+      assert.equal(after.replace(MARK, ''), before, 'aucune ligne retirée ni modifiée');
+      assert.match(after, MARK);
+      assert.match(t.log(), /liste « À demander » reprise dans les propositions/);
       assert.equal(t.status(), '');
     });
 
-    test('retrouve l\'élément par son titre si sa position a changé', async () => {
-      await t.admin('/admin/a-demander/coche', { method: 'POST', body: t.form({ id: '0.0', titre: 'Polenta', fait: 'on' }) });
-      assert.match(t.read('À demander.md'), /- \[ \] Carottes râpées/);
-      assert.match(t.read('À demander.md'), /- \[x\] Polenta/);
+    test('migration idempotente, même après une interruption (marque non écrite)', async () => {
+      await unmigrated();
+      await t.init();
+      assert.equal(listJson('a-moderer').length, 3);
+      await unmigrated(); // propositions déjà là, mais marque absente
+      assert.equal(listJson('a-moderer').length, 3);
+      assert.equal(listJson('traitees').length, 1);
     });
 
-    test('élément introuvable : rien n\'est écrit', async () => {
-      const before = t.read('À demander.md');
-      await t.admin('/admin/a-demander/suppr', { method: 'POST', body: t.form({ id: '9.9', titre: 'Inexistant' }) });
-      assert.equal(t.read('À demander.md'), before);
+    test('ajouter une demande depuis l\'admin, listée avec les propositions', async () => {
+      await t.admin('/admin/demandes', { method: 'POST', body: t.form({ titre: '  Betteraves ', note: 'Maman', categorie: 'Entrées' }) });
+      const [d] = listJson('a-moderer');
+      assert.deepEqual([d.type, d.titre, d.note, d.categorie, d.prenom], ['demande', 'Betteraves', 'Maman', 'Entrées', 'Paul']);
+      const html = await (await t.admin('/admin')).text();
+      assert.match(html, /Propositions <span class="count">1<\/span>/);
+      assert.match(html, new RegExp(`href="/admin/propositions/${d.id}"><b>Betteraves</b></a>\\s*<span class="tag-demande">Demande</span>`));
+      assert.match(html, /— Maman/);
+      await t.admin('/admin/demandes', { method: 'POST', body: t.form({ titre: ' ' }) });
+      assert.equal(listJson('a-moderer').length, 1, 'titre vide : rien de créé');
+    });
+
+    test('rédiger la fiche depuis une demande puis la publier', async () => {
+      await t.admin('/admin/demandes', { method: 'POST', body: t.form({ titre: 'Polenta', note: 'demander à Kenza', categorie: 'Desserts' }) });
+      const [d] = listJson('a-moderer');
+      const html = await (await t.admin(`/admin/propositions/${d.id}`)).text();
+      assert.match(html, /title: Polenta\n/);
+      assert.match(html, /course: dessert\n/);
+      assert.match(html, /-- Demande : demander à Kenza/);
+      assert.match(html, /Demandée par <b>Paul<\/b>/);
+
+      const fd = new FormData();
+      fd.set('fichier', 'Polenta');
+      fd.set('source', '---\ntitle: Polenta\ncourse: dessert\n---\n\nCuire la @polenta{200%g}.\n');
+      const res = await t.admin(`/admin/propositions/${d.id}/publier`, { method: 'POST', body: fd });
+      assert.equal(res.status, 302);
+      assert.match(t.read('Polenta.cook'), /Cuire la @polenta/);
+      assert.match(t.log(), /nouvelle recette « Polenta » \(demandée par Paul\)/);
+      assert.equal(listJson('a-moderer').length, 0);
+      assert.equal(listJson('traitees')[0].recette, 'Polenta.cook');
     });
   });
 

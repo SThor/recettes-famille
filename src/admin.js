@@ -4,20 +4,19 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { fromSource, slugify, cookTimeHint, PHOTO_EXT } = require('./recipes');
-const { parseTodo, serializeTodo, findItem } = require('./todo');
+const { statesOf, createDemande, courseOf } = require('./demandes');
 const { setField, yamlList } = require('./frontmatter');
 const views = require('./views');
 const adminViews = require('./adminViews');
 const { writeAtomic, today } = require('./files');
 
-const TODO_FILE = 'À demander.md';
 const hash = s => crypto.createHash('sha1').update(s).digest('hex');
 const safeFileName = s => s.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
 
 module.exports = function adminRouter({ store, git, dataDir, adminPassword, safeEqual }) {
   const router = express.Router();
   const dir = store.dir;
-  const states = { pending: path.join(dataDir, 'a-moderer'), done: path.join(dataDir, 'traitees'), archived: path.join(dataDir, 'archivees'), imported: path.join(dataDir, 'importees') };
+  const states = statesOf(dataDir);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: 25 * 1024 * 1024 } });
   const form = express.urlencoded({ extended: false, limit: '1mb' });
 
@@ -52,10 +51,6 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     writeAtomic(path.join(from, 'recette.json'), JSON.stringify({ ...info, ...extra }, null, 2));
     fs.renameSync(from, path.join(states[to], p.id));
   }
-  function readTodo() {
-    const full = path.join(dir, TODO_FILE);
-    return fs.existsSync(full) ? parseTodo(fs.readFileSync(full, 'utf8')) : null;
-  }
   const back = (res, anchor, flash) => res.redirect(`/admin${flash ? `?ok=${encodeURIComponent(flash)}` : ''}#${anchor}`);
 
   // --- Tableau de suivi ---
@@ -66,7 +61,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       try { history = await git.log(15); } catch {}
       res.send(adminViews.dashboard({
         theme: req.theme, user: req.user, recipes: store.all(), missingTags: store.missingTags(), proposals: listProposals(), imported: listProposals('imported'),
-        todo: readTodo(), history, flash: req.query.ok,
+        history, flash: req.query.ok,
       }));
     } catch (err) { next(err); }
   });
@@ -140,6 +135,14 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
 
   // --- Proposition → recette ---
   function templateFor(p) {
+    if (p.type === 'demande') {
+      return [
+        '---', `title: ${p.titre}`, 'author:', 'shared by:', 'source:', 'servings:', `course: ${courseOf(p.categorie)}`,
+        'tags: []', 'prep time:', 'cook time:', 'checked by:', '---', '',
+        ...(p.note ? [`-- Demande : ${p.note}`, ''] : []),
+        'Mélanger la @farine{250%g} et les @œufs{3} dans un #saladier{}.', '',
+      ].join('\n');
+    }
     const paragraphs = String(p.texte || '').replace(/\r\n/g, '\n').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
     return [
       '---',
@@ -199,7 +202,7 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       if (copies.length) source = setField(source, 'original', yamlList([...r.originals, ...copies.map(c => c.to)]));
 
       const pdir = path.join(states.pending, p.id);
-      await git.write(`Site : nouvelle recette « ${r.title} » (proposée par ${p.prenom})`, req.user, () => {
+      await git.write(`Site : nouvelle recette « ${r.title} » (${p.type === 'demande' ? 'demandée' : 'proposée'} par ${p.prenom})`, req.user, () => {
         fs.mkdirSync(path.join(dir, 'Originaux'), { recursive: true });
         for (const c of copies) fs.copyFileSync(path.join(pdir, c.from), path.join(dir, c.to));
         if (plat) fs.copyFileSync(path.join(pdir, plat.f), path.join(dir, fichier + (PHOTO_EXT.includes(path.extname(plat.f).toLowerCase()) ? path.extname(plat.f).toLowerCase() : '.jpg')));
@@ -218,6 +221,15 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
     const p = readProposal(req.params.id);
     if (p) moveProposal(p, 'archived', { archiveeLe: today(), archiveePar: req.user });
     back(res, 'propositions', p ? `« ${p.titre} » archivée (conservée sur le serveur).` : '');
+  });
+
+  // Demande : une proposition sans contenu, dont l'admin rédige la fiche (même éditeur).
+  router.post('/demandes', form, (req, res) => {
+    const clean = (v, max) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
+    const titre = clean(req.body.titre, 200);
+    if (!titre) return back(res, 'propositions');
+    createDemande(states.pending, { prenom: req.user, titre, note: clean(req.body.note, 300), categorie: clean(req.body.categorie, 60) });
+    back(res, 'propositions', `Demande « ${titre} » ajoutée.`);
   });
 
   // --- Recettes : création et édition ---
@@ -307,55 +319,6 @@ module.exports = function adminRouter({ store, git, dataDir, adminPassword, safe
       store.invalidate();
       back(res, 'recettes');
     } catch (err) { next(err); }
-  });
-
-  // --- À demander ---
-  function updateTodo(req, res, next, message, mutate) {
-    const full = path.join(dir, TODO_FILE);
-    git.write(message, req.user, () => {
-      const doc = parseTodo(fs.readFileSync(full, 'utf8'));
-      if (mutate(doc) === false) return;
-      writeAtomic(full, serializeTodo(doc));
-    }).then(() => back(res, 'a-demander')).catch(next);
-  }
-  // Retrouve l'élément par position, en vérifiant le titre (le fichier a pu bouger entre-temps).
-  function locate(doc, id, titre) {
-    const hit = findItem(doc, id);
-    if (hit && hit.item.title === titre) return hit;
-    for (const section of doc.sections) {
-      const index = section.entries.findIndex(e => e.type === 'item' && e.title === titre);
-      if (index >= 0) return { section, index, item: section.entries[index] };
-    }
-    return null;
-  }
-
-  router.post('/a-demander/coche', form, (req, res, next) => {
-    const titre = String(req.body.titre || '');
-    updateTodo(req, res, next, `Site : « ${titre} » ${req.body.fait ? 'reçue' : 'à demander'}`, doc => {
-      const hit = locate(doc, req.body.id, titre);
-      if (!hit) return false;
-      hit.item.done = Boolean(req.body.fait);
-    });
-  });
-
-  router.post('/a-demander/ajout', form, (req, res, next) => {
-    const titre = String(req.body.titre || '').replace(/\s+/g, ' ').replace(/ — /g, ' - ').trim();
-    const note = String(req.body.note || '').replace(/\s+/g, ' ').trim();
-    if (!titre) return back(res, 'a-demander');
-    updateTodo(req, res, next, `Site : « ${titre} » ajoutée à la liste`, doc => {
-      const section = doc.sections[Number(req.body.section)] || doc.sections[0];
-      if (!section) return false;
-      section.entries.push({ type: 'item', done: false, title: titre, note });
-    });
-  });
-
-  router.post('/a-demander/suppr', form, (req, res, next) => {
-    const titre = String(req.body.titre || '');
-    updateTodo(req, res, next, `Site : « ${titre} » retirée de la liste`, doc => {
-      const hit = locate(doc, req.body.id, titre);
-      if (!hit) return false;
-      hit.section.entries.splice(hit.index, 1);
-    });
   });
 
   return router;

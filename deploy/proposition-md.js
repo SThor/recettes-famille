@@ -3,7 +3,7 @@
 //   node proposition-md.js <dossier de la proposition> <dossier Propositions du vault>
 // Crée « <date> - <titre>/ » avec « <titre>.md » (note Obsidian) et les photos.
 // N'écrase jamais un dossier existant (déjà importé, ou retravaillé par l'agent du vault).
-// Affiche « importee <dossier> » ou « deja-present <dossier> ».
+// Affiche « importee <dossier> », « deja-present <dossier> » ou « demande <titre> » (laissée sur le serveur).
 const fs = require('fs');
 const path = require('path');
 
@@ -16,6 +16,12 @@ const safe = s => String(s || '').replace(/[\\/:*?"<>|#^[\]\u0000-\u001f]/g, '')
 const titre = safe(info.titre);
 const date = id.slice(0, 10); // l'identifiant commence par la date ISO
 const folder = path.join(destRoot, `${date} - ${titre}`);
+
+// Demande encore vide (rien que le titre) : elle se rédige dans l'admin du site, pas dans le vault.
+if (info.type === 'demande' && !String(info.texte || '').trim() && !(info.photos || []).length) {
+  console.log(`demande ${info.titre || titre}`);
+  process.exit(0);
+}
 
 if (fs.existsSync(folder)) {
   console.log(`deja-present ${path.basename(folder)}`);

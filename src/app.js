@@ -8,6 +8,7 @@ const views = require('./views');
 const { componentsPage } = require('./composants');
 const { createGit } = require('./git');
 const adminRouter = require('./admin');
+const { statesOf, migrateTodo } = require('./demandes');
 const { fontsRouter } = require('./fonts');
 const { answerQuestion, reportError, cleanName, REVIEW_STATES, reviewStateOf } = require('./revue');
 const { setField } = require('./frontmatter');
@@ -287,7 +288,13 @@ function createApp({
     res.status(500).send(views.layout({ title: 'Erreur', theme: req.theme, account: req.account, body: `<section class="form-page"><h1>Oups</h1><p class="error">${views.esc(err.message)}</p><p>Rien n'a été perdu : reviens en arrière pour réessayer.</p></section>` }));
   });
 
-  return { app, store, git };
+  // Démarrage : rattrapage git, puis reprise unique de « À demander.md » en demandes.
+  async function init() {
+    if (!(await git.init())) return;
+    await migrateTodo({ dir: RECIPES_DIR, git, states: statesOf(path.dirname(SUBMISSIONS_DIR)) });
+  }
+
+  return { app, store, git, init };
 }
 
 module.exports = { createApp };

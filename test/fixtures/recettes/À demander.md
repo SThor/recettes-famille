@@ -4,6 +4,7 @@ type: note
 Retour : [[Livre de recettes de famille]]
 
 Texte d'introduction libre.
+> Liste reprise par le site le 2026-10-20 (Suivi → Propositions) : ne plus la modifier ici.
 
 ## Entrées
 - [ ] Carottes râpées

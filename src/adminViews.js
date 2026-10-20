@@ -1,5 +1,5 @@
 const { esc, enc, layout, ASSET_V } = require('./views');
-const { cookTimeHint } = require('./recipes');
+const { cookTimeHint, COURSES } = require('./recipes');
 
 const yes = ok => `<span class="badge ${ok ? 'ok' : 'ko'}">${ok ? '✓' : '✗'}</span>`;
 
@@ -26,7 +26,7 @@ const FILTERS = [
 ];
 const wikiText = s => esc(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => b || a);
 
-function dashboard({ theme, user, recipes, missingTags = [], proposals, imported = [], todo, history, flash }) {
+function dashboard({ theme, user, recipes, missingTags = [], proposals, imported = [], history, flash }) {
   const n = recipes.length;
   const count = f => recipes.filter(f).length;
   const stats = [
@@ -35,11 +35,9 @@ function dashboard({ theme, user, recipes, missingTags = [], proposals, imported
     ['photos du plat', count(r => r.photo)],
     ['auteur', count(r => r.meta.author || r.meta['shared by'])],
   ];
-  const todoItems = todo ? todo.sections.flatMap(s => s.entries.filter(e => e.type === 'item')) : [];
   const tabs = [
     ['propositions', 'Propositions', proposals.length],
     ['recettes', 'Recettes', n],
-    ['a-demander', 'À demander', todoItems.filter(i => !i.done).length],
     ['historique', 'Historique', null],
   ];
   // Volet ouvert par défaut (sans #ancre) : les propositions s'il y en a à traiter.
@@ -58,10 +56,24 @@ function dashboard({ theme, user, recipes, missingTags = [], proposals, imported
   ${flash ? `<p class="flash">${esc(flash)}</p>` : ''}
 
   ${panel('propositions', `<h2>Propositions à traiter</h2>
-  ${proposals.length ? `<ul class="admin-list">${proposals.map(p => `<li>
+  ${proposals.length ? `<ul class="admin-list">${proposals.map(p => p.type === 'demande' ? `<li>
+    <a href="/admin/propositions/${enc(p.id)}"><b>${esc(p.titre)}</b></a>
+    <span class="tag-demande">Demande</span>
+    <span class="muted">${p.categorie ? `${esc(p.categorie)} · ` : ''}par ${esc(p.prenom)}, ${esc(p.date)}${p.note ? ` — ${wikiText(p.note)}` : ''}</span>
+  </li>` : `<li>
     <a href="/admin/propositions/${enc(p.id)}"><b>${esc(p.titre)}</b></a>
     <span class="muted">par ${esc(p.prenom)}, ${esc(p.date)}${p.photos.length ? ` · ${p.photos.length} photo${p.photos.length > 1 ? 's' : ''}` : ''}</span>
   </li>`).join('')}</ul>` : '<p class="muted">Rien en attente.</p>'}
+  <details class="todo-add"><summary>+ Nouvelle demande</summary>
+    <p class="muted small">Une recette à réclamer à la famille : tu pourras en rédiger la fiche ici dès que tu l’as.</p>
+    <form method="post" action="/admin/demandes">
+      <label>Recette<input name="titre" required maxlength="200"></label>
+      <label>Catégorie <small>(facultatif)</small><input name="categorie" list="categories" maxlength="60"></label>
+      <datalist id="categories">${COURSES.map(([, label]) => `<option value="${esc(label)}">`).join('')}</datalist>
+      <label>À qui la demander, commentaire <small>(facultatif)</small><input name="note" maxlength="300"></label>
+      <button class="button">Ajouter la demande</button>
+    </form>
+  </details>
   ${imported.length ? `<h3>Importées dans le vault <span class="count">${imported.length}</span></h3>
   <p class="muted small">Récupérées avec deploy/recuperer-propositions.sh, à mettre au propre par l’agent du vault.</p>
   <ul class="admin-list">${imported.map(p => `<li><span><b>${esc(p.titre)}</b> <span class="muted">par ${esc(p.prenom)}, ${esc(p.date)}</span></span></li>`).join('')}</ul>` : ''}`)}
@@ -99,30 +111,6 @@ function dashboard({ theme, user, recipes, missingTags = [], proposals, imported
   </li>`).join('')}
   </ul>`)}
 
-  ${panel('a-demander', `<h2>À demander</h2>
-  ${todo ? todo.sections.map(s => `
-    <h3>${esc(s.title)}</h3>
-    <ul class="admin-list todo">
-    ${s.entries.filter(e => e.type === 'item').map(e => `<li class="${e.done ? 'done' : ''}">
-      <form method="post" action="/admin/a-demander/coche">
-        <input type="hidden" name="id" value="${e.id}"><input type="hidden" name="titre" value="${esc(e.title)}">
-        <label><input type="checkbox" name="fait" ${e.done ? 'checked' : ''} onchange="this.form.submit()">
-          <span>${wikiText(e.title)}${e.note ? ` <span class="muted small">— ${wikiText(e.note)}</span>` : ''}</span></label>
-      </form>
-      <form method="post" action="/admin/a-demander/suppr" onsubmit="return confirm('Retirer « ${esc(e.title.replace(/['\\]/g, '’'))} » de la liste ?')">
-        <input type="hidden" name="id" value="${e.id}"><input type="hidden" name="titre" value="${esc(e.title)}">
-        <button class="icon-btn" aria-label="Retirer">✕</button>
-      </form>
-    </li>`).join('')}
-    </ul>`).join('') : '<p class="muted">Fichier « À demander.md » introuvable.</p>'}
-  ${todo ? `<form method="post" action="/admin/a-demander/ajout" class="todo-add">
-    <h3>Ajouter</h3>
-    <label>Catégorie<select name="section">${todo.sections.map((s, i) => `<option value="${i}">${esc(s.title)}</option>`).join('')}</select></label>
-    <label>Recette<input name="titre" required maxlength="200"></label>
-    <label>Commentaire <small>(facultatif)</small><input name="note" maxlength="300"></label>
-    <button class="button">Ajouter à la liste</button>
-  </form>` : ''}`)}
-
   ${panel('historique', `<h2>Historique</h2>
   ${history ? `<ul class="history">${history.map(h => `<li><span class="muted small">${esc(h.date)} · ${esc(h.author)}</span><br>${esc(h.subject)}</li>`).join('')}</ul>` : '<p class="muted">Pas de dépôt git.</p>'}`)}
 </div>
@@ -149,7 +137,7 @@ function editor({ theme, title, action, source, base, fichier, isNew, proposal, 
   <div class="editor-layout${hasOriginal ? ' has-original' : ''}">
     ${hasOriginal ? `<aside class="pane-original">
       <details open id="original-box">
-        <summary>${proposal ? 'Proposition' : 'Fiche d’origine'}${originals.length > 1 ? ` (${originals.length} photos)` : ''}</summary>
+        <summary>${proposal ? (proposal.type === 'demande' ? 'Demande' : 'Proposition') : 'Fiche d’origine'}${originals.length > 1 ? ` (${originals.length} photos)` : ''}</summary>
         ${proposal ? proposalBlock(proposal) : ''}
         ${originals.map(src => `<a href="${src}" target="_blank" title="Ouvrir en grand"><img src="${src}" alt="Fiche d'origine" loading="lazy"></a>`).join('')}
       </details>
@@ -197,6 +185,11 @@ function editor({ theme, title, action, source, base, fichier, isNew, proposal, 
 }
 
 function proposalBlock(p) {
+  if (p.type === 'demande') return `<div class="proposal">
+    <p class="muted small">Demandée par <b>${esc(p.prenom)}</b> le ${esc(p.date)}${p.categorie ? ` · ${esc(p.categorie)}` : ''}</p>
+    ${p.note ? `<p>${wikiText(p.note)}</p>` : ''}
+    <p class="muted small">Demande sans texte : rédige la fiche à droite.</p>
+  </div>`;
   return `<div class="proposal">
     <p class="muted small">Proposée par <b>${esc(p.prenom)}</b> le ${esc(p.date)}</p>
     <pre>${esc(p.texte || '(pas de texte)')}</pre>

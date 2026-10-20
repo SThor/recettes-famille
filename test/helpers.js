@@ -38,12 +38,12 @@ async function startApp() {
   const recipesDir = makeRecipesRepo(root);
   trace('repo ok');
   const submissionsDir = path.join(root, 'data', 'a-moderer');
-  const { app, git: appGit } = createApp({
+  const { app, init } = createApp({
     RECIPES_DIR: recipesDir, SUBMISSIONS_DIR: submissionsDir,
     FAMILY_PASSWORD: FAMILY, ADMIN_PASSWORD: ADMIN, SESSION_SECRET: 'secret-test',
   });
-  await appGit.init();
-  trace('git init ok');
+  await init();
+  trace('init ok');
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   trace('listen ok');
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -54,7 +54,7 @@ async function startApp() {
   const form = data => new URLSearchParams(data);
 
   return {
-    root, recipesDir, submissionsDir, base, req, admin, form, adminAuth,
+    root, recipesDir, submissionsDir, base, init, req, admin, form, adminAuth,
     read: f => fs.readFileSync(path.join(recipesDir, f), 'utf8'),
     log: (n = 1) => git(recipesDir, 'log', `-${n}`, '--format=%an|%s'),
     status: () => git(recipesDir, 'status', '--porcelain'),

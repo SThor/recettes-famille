@@ -61,6 +61,10 @@ function specimen(theme, label) {
     ${filterPill('review', REVIEW_ICON.questions, 'Relecture : <b>Questions</b>', '#')}
     <li><a class="clear-filters" href="#">Tout effacer</a></li></ul>`)}
   ${part('cartes', 'Cartes', `<section class="course"><h2>Plats</h2><ul class="cards">${recipes.map(r => card(r)).join('')}</ul></section>`)}
+  ${part('propositions', 'Propositions (admin)', `<ul class="admin-list">
+    <li><a href="#"><b>Gratin aux épinards</b></a> <span class="muted">par Carole, 15/10/2026 · 2 photos</span></li>
+    <li><a href="#"><b>Polenta</b></a> <span class="tag-demande">Demande</span> <span class="muted">Desserts · par Paul, 16/10/2026 — Kenza</span></li>
+  </ul>`)}
   ${part('recette', 'Recette', recipeArticle(fromSource(SAMPLE, 'demo.cook', null), { back: false, originals: false }))}
 </section>`.replace(/href="[^"#][^"]*"/g, 'href="#"');
 }

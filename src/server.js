@@ -10,9 +10,9 @@ const {
   SESSION_SECRET = 'dev',
 } = process.env;
 
-const { app, store, git } = createApp({ RECIPES_DIR, SUBMISSIONS_DIR, FAMILY_PASSWORD, ADMIN_PASSWORD, SESSION_SECRET });
+const { app, store, init } = createApp({ RECIPES_DIR, SUBMISSIONS_DIR, FAMILY_PASSWORD, ADMIN_PASSWORD, SESSION_SECRET });
 
-git.init().catch(err => console.error('git :', err.message));
+init().catch(err => console.error('démarrage :', err.message));
 
 app.listen(PORT, () => {
   console.log(`Recettes de la Givellerie sur http://localhost:${PORT} — ${store.all().length} recettes dans ${RECIPES_DIR}`);

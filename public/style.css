@@ -168,8 +168,6 @@ form .button { width: 100%; }
 .admin-list form { margin: 0; }
 .admin-list label { display: flex; gap: 10px; align-items: baseline; margin: 0; font-weight: 400; cursor: pointer; }
 .admin-list input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; flex: none; transform: translateY(3px); }
-.todo > li { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.todo > li.done span { text-decoration: line-through; opacity: .55; }
 .icon-btn { border: 0; background: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 2px 6px; }
 .todo-add { margin-top: 16px; }
 form select { display: block; width: 100%; margin-top: 6px; font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); }
@@ -657,3 +655,4 @@ button.timer.watch.running { background: var(--warn); }
 .specimen .filters-panel { position: static; max-height: none; transform: none; visibility: visible; box-shadow: none; border-radius: var(--radius); }
 .specimen .cards { grid-template-columns: 1fr; }
 .specimen .course h2 { margin-top: 0; }
+.tag-demande { font-size: .75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }

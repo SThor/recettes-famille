@@ -91,3 +91,12 @@ test('aucune proposition : message et rien d\'autre', { skip }, () => {
   assert.match(r.stdout, /Aucune proposition en attente/);
   assert.ok(!fs.existsSync(vault) || fs.readdirSync(vault).length === 0);
 });
+
+test('une demande encore vide reste sur le site (rédigée depuis l\'admin), pas dans le vault', { skip }, () => {
+  propose('2026-10-16T09-00-00-000Z-dem001', { type: 'demande', prenom: 'Paul', titre: 'Polenta', texte: '', note: 'Kenza', date: '16/10/2026' });
+  const r = run();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /Polenta.*demande/);
+  assert.deepEqual(fs.readdirSync(vault), [FOLDER]);
+  assert.ok(fs.existsSync(path.join(data, 'a-moderer', '2026-10-16T09-00-00-000Z-dem001', 'recette.json')));
+});
