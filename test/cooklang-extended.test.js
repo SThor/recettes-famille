@@ -139,7 +139,7 @@ test.describe('Affichage', () => {
   test('difficulté, cuisine, régime parmi les infos', () => {
     const out = html();
     assert.match(out, /<dt>Difficulté<\/dt><dd>facile<\/dd>/);
-    assert.match(out, /<dt>Cuisine<\/dt><dd>française<\/dd>/);
+    assert.match(out, /<dt>Cuisine<\/dt><dd><a href="\/\?cuisine=fran%C3%A7aise">française<\/a><\/dd>/);
     assert.match(out, /<dt>Régime<\/dt><dd><a href="\/\?regime=v%C3%A9g%C3%A9tarien">végétarien<\/a>, <a href="\/\?regime=sans%20porc">sans porc<\/a><\/dd>/);
   });
 });

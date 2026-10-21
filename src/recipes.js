@@ -140,6 +140,11 @@ const peopleOf = r => {
     .filter(s => s && !seen.has(normValue(s)) && seen.add(normValue(s)));
 };
 
+// Cuisines d'une recette (clé `cuisine`, texte ou liste) pour le filtre : sans la précision entre
+// parenthèses, « indienne (Kerala) » compte comme « indienne ».
+const cuisineName = s => String(s).replace(/\s*\(.*\)\s*$/, '').trim();
+const cuisinesOf = r => asList(r.meta.cuisine).map(cuisineName).filter(Boolean);
+
 function createStore(dir) {
   let cache = null;
   let cachedAt = 0;
@@ -194,6 +199,8 @@ function createStore(dir) {
     tags() { return countValues(load(), r => r.tags); },
     // Régimes (clé `diet`, texte ou liste), comptés comme les étiquettes.
     diets() { return countValues(load(), r => asList(r.meta.diet)); },
+    // Cuisines (clé `cuisine`, voir cuisinesOf), comptées comme les étiquettes.
+    cuisines() { return countValues(load(), cuisinesOf); },
     // Personnes (rapporteurs + origines fusionnés), comptées comme les étiquettes.
     people() { return countValues(load(), peopleOf, { capitalized: true }); },
     grouped(keep = () => true) {
@@ -215,4 +222,4 @@ function createStore(dir) {
   };
 }
 
-module.exports = { normValue, asList, peopleOf, cookTimeHint, createStore, fromSource, slugify, PHOTO_EXT, COURSES };
+module.exports = { normValue, asList, peopleOf, cuisineName, cuisinesOf, cookTimeHint, createStore, fromSource, slugify, PHOTO_EXT, COURSES };

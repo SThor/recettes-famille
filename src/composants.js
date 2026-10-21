@@ -45,6 +45,8 @@ function specimen(theme, label) {
       <div class="tags">${opts('person', [['Annie', 3, false], ['Carole', 5, true]])}</div></details>
     <details class="diets kind-diet" open><summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">2</span></summary>
       <div class="tags">${opts('diet', [['Végétarien', 4, true], ['Sans gluten', 1, false]])}</div></details>
+    <details class="cuisines kind-cuisine" open><summary class="filter-title">${icon('globe', 16)} Cuisine <span class="count">2</span></summary>
+      <div class="tags">${opts('cuisine', [['auvergnate', 1, false], ['indienne', 2, true]])}</div></details>
     <div class="duree kind-duree"><label class="filter-title">${icon('timer', 16)} Durée max <output>30 min</output></label>
       <input type="range" min="0" max="16" step="1" value="6" style="--fill: 38%">
       <div class="duree-presets"><a class="duree-preset" href="#">15 min</a><a class="duree-preset" href="#">30 min</a><a class="duree-preset" href="#">1 h</a></div></div>
@@ -56,6 +58,7 @@ function specimen(theme, label) {
   ${part('pastilles', 'Filtres actifs', `<ul class="active-filters" aria-label="Filtres actifs">
     ${filterPill('person', 'person', 'Personne : <b>Carole</b>', '#')}
     ${filterPill('diet', 'leaf', 'Régime : <b>Végétarien</b>', '#')}
+    ${filterPill('cuisine', 'globe', 'Cuisine : <b>indienne</b>', '#')}
     ${filterPill('duree', 'timer', 'Durée : <b>30 min max</b>', '#')}
     ${filterPill('tag', 'tag', 'Étiquette : <b>auvergne</b>', '#')}
     ${filterPill('review', REVIEW_ICON.questions, 'Relecture : <b>Questions</b>', '#')}

@@ -15,6 +15,7 @@
   /* Filtres : rouge vichy, vert olive, bleu ardoise, moutarde, brun bois */
   --c-person: #a5322d; --c-person-soft: #f6dfd8;
   --c-diet: #59682c; --c-diet-soft: #e9ead2;
+  --c-cuisine: #2e5f63; --c-cuisine-soft: #dbe8e6;
   --c-duree: #465769; --c-duree-soft: #e2e7eb;
   --c-tag: #86600f; --c-tag-soft: #f3e5c0;
   --c-review: #77503a; --c-review-soft: #efe2d4;

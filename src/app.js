@@ -3,7 +3,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { createStore, slugify, normValue, asList, peopleOf } = require('./recipes');
+const { createStore, slugify, normValue, asList, peopleOf, cuisinesOf } = require('./recipes');
 const views = require('./views');
 const { componentsPage } = require('./composants');
 const { createGit } = require('./git');
@@ -105,7 +105,7 @@ function createApp({
   // --- Tout le reste est réservé à la famille ---
   app.use((req, res, next) => (req.isFamily ? next() : res.redirect('/connexion')));
 
-  // Accueil, éventuellement filtré sur une étiquette (?tag=…) et/ou un régime (?regime=…),
+  // Accueil, éventuellement filtré sur une étiquette (?tag=…), un régime (?regime=…), une cuisine (?cuisine=…),
   // comparaisons sans casse ni espaces superflus.
   // + durée maximum (?duree=minutes), sur le temps total ou sur la préparation seule (?temps=prep).
   app.get('/', (req, res) => {
@@ -117,12 +117,13 @@ function createApp({
       if (s && !selectedTags.some(x => normValue(x) === normValue(s))) selectedTags.push(s);
     }
     const regime = param('regime');
+    const cuisine = param('cuisine');
     const personne = param('personne');
     const relecture = REVIEW_STATES.some(([k]) => k === param('relecture')) ? param('relecture') : '';
     const duree = /^\d{1,4}$/.test(param('duree')) && Number(param('duree')) > 0 ? Number(param('duree')) : null;
     const temps = param('temps') === 'prep' ? 'prep' : 'total';
     const has = (values, wanted) => values.some(x => normValue(x) === normValue(wanted));
-    const base = r => selectedTags.every(tg => has(r.tags, tg)) && (!regime || has(asList(r.meta.diet), regime)) && (!personne || has(peopleOf(r), personne))
+    const base = r => selectedTags.every(tg => has(r.tags, tg)) && (!regime || has(asList(r.meta.diet), regime)) && (!cuisine || has(cuisinesOf(r), cuisine)) && (!personne || has(peopleOf(r), personne))
       && (!relecture || reviewStateOf(r) === relecture);
     const minutes = r => (temps === 'prep' ? r.durations.prep : r.durations.total);
     // Les recettes hors durée restent dans la page, masquées : le curseur peut les réafficher en direct.
@@ -133,8 +134,8 @@ function createApp({
     // Paramètres de filtre actuels, dans l'ordre de l'URL (pour construire les liens).
     // (une clé répétée, comme tag, donne une entrée par valeur)
     const params = Object.entries(req.query).flatMap(([k, v]) => [].concat(v).map(x => [k, x]))
-      .filter(([k, v]) => ['tag', 'regime', 'personne', 'relecture', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
-    res.send(views.home({ account: req.account, relecture, reviews: REVIEW_STATES.map(([key, label]) => ({ key, label, count: store.all().filter(r => reviewStateOf(r) === key).length })), groups, fits, theme: req.theme, selectedTags, tagInfo: store.tagInfo, regime, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), people: store.people() }));
+      .filter(([k, v]) => ['tag', 'regime', 'cuisine', 'personne', 'relecture', 'duree', 'temps'].includes(k) && typeof v === 'string' && v.trim());
+    res.send(views.home({ account: req.account, relecture, reviews: REVIEW_STATES.map(([key, label]) => ({ key, label, count: store.all().filter(r => reviewStateOf(r) === key).length })), groups, fits, theme: req.theme, selectedTags, tagInfo: store.tagInfo, regime, cuisine, personne, duree, temps, unknown, params, tags: store.tags(), diets: store.diets(), cuisines: store.cuisines(), people: store.people() }));
   });
 
   app.get('/recette/:slug', (req, res) => {

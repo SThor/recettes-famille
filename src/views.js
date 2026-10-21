@@ -1,4 +1,4 @@
-const { slugify, peopleOf, normValue } = require('./recipes');
+const { slugify, peopleOf, normValue, cuisineName } = require('./recipes');
 const { toSecondsRange, formatMinutes } = require('./durations');
 const { icon } = require('./icons');
 const { REVIEW_STATES, reviewStateOf } = require('./revue');
@@ -130,7 +130,7 @@ function homeUrl(params, changes = {}) {
   return entries.length ? `/?${entries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}` : '/';
 }
 
-// Option d'un filtre du panneau (personne, régime, étiquette, relecture) : un seul composant, classe
+// Option d'un filtre du panneau (personne, régime, cuisine, étiquette, relecture) : un seul composant, classe
 // « option » + son type. Active → marquée (aria-current) ; href = où mène le clic (la choisir ou la retirer).
 const option = ({ kind, href, active, label, count, title = '', attrs = '', before = '' }) =>
   `<a class="option ${kind}"${attrs} href="${esc(href)}"${active ? ' aria-current="true"' : ''}${title ? ` title="${esc(title)}"` : ''}>${before}${esc(label)} <span class="count">${count}</span></a>`;
@@ -138,14 +138,14 @@ const option = ({ kind, href, active, label, count, title = '', attrs = '', befo
 const filterPill = (kind, iconName, label, removeHref) =>
   `<li class="filter-pill ${kind}"><span class="pill-label">${icon(iconName, 16)} ${label}</span><a class="pill-remove" href="${esc(removeHref)}" aria-label="Retirer ce filtre">×</a></li>`;
 
-function home({ account, relecture = '', reviews = [], groups, fits = () => true, theme, selectedTags = [], tagInfo = () => null, regime = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], people = [] }) {
+function home({ account, relecture = '', reviews = [], groups, fits = () => true, theme, selectedTags = [], tagInfo = () => null, regime = '', cuisine = '', personne = '', duree = null, temps = 'total', unknown = 0, params = [], tags = [], diets = [], cuisines = [], people = [] }) {
   const count = groups.reduce((n, g) => n + g.recipes.filter(fits).length, 0);
   const recettes = n => `${n} recette${n > 1 ? 's' : ''}`;
   // Étiquettes choisies (plusieurs possibles) : lien avec une autre sélection d'étiquettes.
   const isSelected = name => selectedTags.some(x => normValue(x) === normValue(name));
   const withTags = list => homeUrl(params, { tag: list.length ? list : null });
   const withoutTag = name => withTags(selectedTags.filter(x => normValue(x) !== normValue(name)));
-  // Filtre à une seule valeur (personne, régime, relecture) : choisir remplace, rechoisir retire.
+  // Filtre à une seule valeur (personne, régime, cuisine, relecture) : choisir remplace, rechoisir retire.
   const single = (kind, key, value, label, count, active, extra = {}) =>
     option({ kind, label, count, active, href: homeUrl(params, { [key]: active ? null : value }), ...extra });
 
@@ -153,6 +153,7 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   // « Tout effacer » au bout de la rangée s'il y en a plusieurs.
   const active = [
     regime && ['diet', 'leaf', `Régime : <b>${esc(regime)}</b>`, { regime: null }],
+    cuisine && ['cuisine', 'globe', `Cuisine : <b>${esc(cuisine)}</b>`, { cuisine: null }],
     personne && ['person', 'person', `Personne : <b>${esc(personne)}</b>`, { personne: null }],
     relecture && ['review', REVIEW_ICON[relecture], `Relecture : <b>${esc((REVIEW_STATES.find(([k]) => k === relecture) || [])[1])}</b>`, { relecture: null }],
     ...selectedTags.map(tg => ['tag', 'tag', `Étiquette : <b>${esc(tg)}</b>`, { tag: selectedTags.filter(x => x !== tg).length ? selectedTags.filter(x => x !== tg) : null }]),
@@ -161,7 +162,7 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   const pills = active.length ? `<ul class="active-filters" aria-label="Filtres actifs">${active.map(([kind, iconName, label, remove]) =>
     filterPill(kind, iconName, label, homeUrl(params, remove))).join('')}${active.length > 1 ? '<li><a class="clear-filters" href="/">Tout effacer</a></li>' : ''}</ul>` : '';
   const notes = `${duree && unknown ? `<p class="muted small">${unknown === 1 ? '1 recette' : `${unknown} recettes`} sans durée${temps === 'prep' ? ' de préparation' : ''} ${unknown === 1 ? 'n’est pas comptée' : 'ne sont pas comptées'}.</p>` : ''}
-  ${active.length && !count ? `<p class="empty">${selectedTags.length === 1 && !regime && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
+  ${active.length && !count ? `<p class="empty">${selectedTags.length === 1 && !regime && !cuisine && !duree ? 'Aucune recette avec cette étiquette.' : 'Aucune recette pour ce filtre.'}</p>` : ''}`;
   // En-tête de la colonne des résultats : nombre de recettes et bouton pour replier le panneau (grand écran).
   // Ligne d'outils au-dessus des deux colonnes : bouton pour replier / déplier le panneau (à gauche,
   // il ne bouge pas quand le panneau se replie) et nombre de recettes.
@@ -176,6 +177,10 @@ function home({ account, relecture = '', reviews = [], groups, fits = () => true
   const dietRow = diets.length ? `<details class="diets kind-diet"${regime ? ' open' : ''}>
     <summary class="filter-title">${icon('leaf', 16)} Régimes <span class="count">${diets.length}</span></summary>
     <div class="tags">${diets.map(d => single('diet', 'regime', d.name, d.name, d.count, normValue(d.name) === normValue(regime))).join('')}</div>
+  </details>` : '';
+  const cuisineRow = cuisines.length ? `<details class="cuisines kind-cuisine"${cuisine ? ' open' : ''}>
+    <summary class="filter-title">${icon('globe', 16)} Cuisine <span class="count">${cuisines.length}</span></summary>
+    <div class="tags">${cuisines.map(c => single('cuisine', 'cuisine', c.name, c.name, c.count, normValue(c.name) === normValue(cuisine))).join('')}</div>
   </details>` : '';
   // Relecture : vérifiées / questions à résoudre / pas encore vérifiées (mêmes icônes que les cartes).
   const reviewRow = reviews.length ? `<details class="review-filter kind-review"${relecture ? ' open' : ''}>
@@ -214,6 +219,7 @@ ${resultsHead}
   <div class="filters-head"><h2>Filtres</h2>${active.length > 1 ? '<a class="clear-filters" href="/">Tout effacer</a>' : ''}</div>
   ${peopleRow}
   ${dietRow}
+  ${cuisineRow}
   ${dureeBlock}
   ${tagCloud}
   ${reviewRow}
@@ -312,10 +318,11 @@ function recipeArticle(r, { back = true, originals = true, tagInfo = () => null 
     m.source && ['Source', m.source],
     m['shared by'] && ['Transmise par', m['shared by']], // clé maison : qui l'a transmise, si différent
   ].filter(Boolean).map(([k, v]) => {
-    // Régimes et personnes mènent à l'accueil filtré sur cette valeur.
-    const param = { 'Régime': 'regime', 'Recette de': 'personne', 'Transmise par': 'personne' }[k];
+    // Régimes, cuisines et personnes mènent à l'accueil filtré sur cette valeur (cuisine : sans sa précision).
+    const param = { 'Régime': 'regime', 'Cuisine': 'cuisine', 'Recette de': 'personne', 'Transmise par': 'personne' }[k];
+    const value = k === 'Cuisine' ? cuisineName : d => d;
     return [k, param
-      ? (Array.isArray(v) ? v : [v]).map(d => `<a href="/?${param}=${encodeURIComponent(d)}">${esc(d)}</a>`).join(', ')
+      ? (Array.isArray(v) ? v : [v]).map(d => `<a href="/?${param}=${encodeURIComponent(value(d))}">${esc(d)}</a>`).join(', ')
       : esc(asText(v))];
   });
 

@@ -14,6 +14,7 @@
   /* Une couleur par type de filtre (options, pastilles, titres de bloc) : teinte foncée + fond clair */
   --c-person: #94505f; --c-person-soft: #f5e9eb;
   --c-diet: #4b6f53; --c-diet-soft: #e8efe9;
+  --c-cuisine: #2f6b6b; --c-cuisine-soft: #e2efee;
   --c-duree: #47637f; --c-duree-soft: #e7edf3;
   --c-tag: #7d6328; --c-tag-soft: #f3eedf;
   --c-review: #665d7c; --c-review-soft: #eeecf3;
@@ -620,12 +621,13 @@ button.timer.watch.running { background: var(--warn); }
    ne lisent que --k / --k-soft. Le bloc Durée (curseur, présélections) reprend sa teinte comme accent. */
 .option.person, .filter-pill.person, .kind-person { --k: var(--c-person); --k-soft: var(--c-person-soft); }
 .option.diet, .filter-pill.diet, .kind-diet { --k: var(--c-diet); --k-soft: var(--c-diet-soft); }
+.option.cuisine, .filter-pill.cuisine, .kind-cuisine { --k: var(--c-cuisine); --k-soft: var(--c-cuisine-soft); }
 .filter-pill.duree, .kind-duree { --k: var(--c-duree); --k-soft: var(--c-duree-soft); }
 .option.tag, .filter-pill.tag, .kind-tag { --k: var(--c-tag); --k-soft: var(--c-tag-soft); }
 .option.review, .filter-pill.review, .kind-review { --k: var(--c-review); --k-soft: var(--c-review-soft); }
 .filters-panel .kind-duree { --accent: var(--k); --accent-soft: var(--k-soft); }
 
-/* Options des filtres du panneau (personnes, régimes, étiquettes, relecture) : un seul composant,
+/* Options des filtres du panneau (personnes, régimes, cuisines, étiquettes, relecture) : un seul composant,
    .option + son type (views.js). Les thèmes ne stylent que .option. Active : pleine ; un clic la retire. */
 .filters-panel .option {
   display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;

@@ -182,12 +182,12 @@ test.describe('Panneau de filtres : un seul composant d\'option', () => {
   });
   test.afterEach(async () => { await t.close(); });
 
-  test('personnes, régimes, étiquettes et relecture : toutes les options ont la classe « option » (+ leur type)', async () => {
+  test('personnes, régimes, cuisines, étiquettes et relecture : toutes les options ont la classe « option » (+ leur type)', async () => {
     const html = await (await t.req('/?tag=auvergne', { headers: { cookie } })).text();
     const panel = html.slice(html.indexOf('<aside class="filters-panel"'), html.indexOf('</aside>'));
     const links = [...panel.matchAll(/<div class="tags">([\s\S]*?)<\/div>/g)].flatMap(m => [...m[1].matchAll(/<a class="([^"]*)"/g)].map(x => x[1]));
     assert.ok(links.length >= 6);
-    for (const cls of links) assert.match(cls, /^option (person|diet|tag|review)$/);
-    for (const kind of ['person', 'diet', 'tag', 'review']) assert.ok(links.includes(`option ${kind}`), kind);
+    for (const cls of links) assert.match(cls, /^option (person|diet|cuisine|tag|review)$/);
+    for (const kind of ['person', 'diet', 'cuisine', 'tag', 'review']) assert.ok(links.includes(`option ${kind}`), kind);
   });
 });

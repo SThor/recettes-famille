@@ -29,7 +29,7 @@ test.describe('Page de test des composants', () => {
 
   test('chaque colonne montre les composants, chacun avec un ancre de section', () => {
     const cols = html.split('<section class="specimen ').slice(1);
-    const kinds = ['person', 'diet', 'duree', 'tag', 'review'];
+    const kinds = ['person', 'diet', 'cuisine', 'duree', 'tag', 'review'];
     for (const col of cols) {
       for (const id of ['boutons', 'filtres', 'pastilles', 'cartes', 'recette', 'propositions']) assert.match(col, new RegExp(`data-part="${id}"`), id);
       // Options du panneau de filtres : chaque type, inactive et active.
