@@ -336,13 +336,12 @@ body:has(.timer-tray:not([hidden])) main { padding-bottom: 160px; }
 .filters-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .filters-head h2 { margin: 0 0 8px; font-size: 1.1rem; }
 .filters-panel .diets { margin: 0 0 14px; }
-.duree { margin: 0 0 14px; }
-.duree label { display: block; font-weight: 600; margin: 0 0 4px; }
-.duree output { color: var(--accent); }
-.duree input[type=range] { width: 100%; accent-color: var(--accent); }
+div.duree label { display: block; font-weight: 600; margin: 0 0 4px; }
+div.duree output { color: var(--accent); }
+div.duree input[type=range] { width: 100%; accent-color: var(--accent); }
 .duree-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
 .duree-preset { font-size: .85rem; padding: 3px 10px; border-radius: 999px; text-decoration: none; background: var(--accent-soft); color: var(--accent); }
-.duree .duree-prep { display: flex; align-items: center; gap: 8px; font-weight: 400; font-size: .95rem; cursor: pointer; }
+div.duree .duree-prep { display: flex; align-items: center; gap: 8px; font-weight: 400; font-size: .95rem; cursor: pointer; }
 .duree-prep input { accent-color: var(--accent); width: 18px; height: 18px; }
 .filters-panel .tag-cloud { margin: 0; }
 .filters-toggle, .filters-apply { display: none; }
@@ -453,19 +452,19 @@ button.timer.done .icon { animation: timer-shake .5s ease-in-out infinite; trans
 .filters-panel details > summary.filter-title { display: flex; background: none; padding: 0; border-radius: 0; }
 
 /* Curseur de durée aux couleurs du thème (piste douce, partie remplie en couleur d'accent) */
-.duree input[type=range] {
+div.duree input[type=range] {
   -webkit-appearance: none; appearance: none; width: 100%; height: 6px; margin: 10px 0; border-radius: 999px; cursor: pointer;
   background: linear-gradient(to right, var(--accent) var(--fill, 100%), var(--accent-soft) var(--fill, 100%));
 }
-.duree input[type=range]::-webkit-slider-thumb {
+div.duree input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
   background: var(--surface); border: 3px solid var(--accent); box-shadow: 0 1px 4px rgb(0 0 0 / .2);
 }
-.duree input[type=range]::-moz-range-thumb {
+div.duree input[type=range]::-moz-range-thumb {
   width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); box-shadow: 0 1px 4px rgb(0 0 0 / .2);
 }
-.duree input[type=range]::-moz-range-track { background: transparent; }
-.duree input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+div.duree input[type=range]::-moz-range-track { background: transparent; }
+div.duree input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
 /* Cartes de recettes : ligne d'infos (durée, portions, régime) */
 .card-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px; font-size: .8rem; color: var(--muted); }

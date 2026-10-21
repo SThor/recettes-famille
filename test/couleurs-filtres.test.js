@@ -59,6 +59,13 @@ test.describe('Couleur par type de filtre', () => {
     }
   });
 
+  test('les règles du bloc Durée ne touchent pas la pastille Durée (même classe « duree »)', () => {
+    // Ex. « .duree { margin-bottom } » décalait la pastille Durée par rapport aux autres de sa ligne.
+    for (const f of ['style.css', 'themes/pastel.css', 'themes/vichy.css']) {
+      assert.doesNotMatch(css(f), /(^|[,}]\s*)\.duree(?![-\w])/m, f);
+    }
+  });
+
   test('option de relecture active : icône en variante claire de sa couleur (lisible sur le fond plein)', () => {
     const src = css('style.css');
     for (const [state, base] of [['ok', '--ok'], ['questions', '--warn'], ['a-verifier', '--muted']]) {
